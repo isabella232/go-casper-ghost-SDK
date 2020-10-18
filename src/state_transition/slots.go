@@ -1,8 +1,8 @@
 package state_transition
 
 import (
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
 )
 

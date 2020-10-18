@@ -2,9 +2,9 @@ package state_transition
 
 import (
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
@@ -157,6 +157,6 @@ func GetBPFromDeposit(state *core.State, deposit *core.Deposit) *core.Validator 
 		ActivationEpoch:            params.ChainConfig.FarFutureEpoch,
 		ActivationEligibilityEpoch: params.ChainConfig.FarFutureEpoch,
 		WithdrawableEpoch:          params.ChainConfig.FarFutureEpoch,
-		WithdrawalCredentials: deposit.Data.WithdrawalCredentials,
+		WithdrawalCredentials: 		deposit.Data.WithdrawalCredentials,
 	}
 }

@@ -3,7 +3,7 @@ package params
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 )
 
 // Bytes4 returns integer x to bytes in little-endian format, x.to_bytes(4, 'little').

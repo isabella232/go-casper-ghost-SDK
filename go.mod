@@ -1,4 +1,4 @@
-module github.com/bloxapp/eth2-staking-pools-research/go-spec
+module github.com/bloxapp/go-casper-ghost-SDK
 
 go 1.14
 
