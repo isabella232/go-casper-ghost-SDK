@@ -223,6 +223,12 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int) {
 		}
 		sk := []byte(fmt.Sprintf("%d", pID))
 
+		// randao
+		randaoReveal, err := signRandao(c.State, sk)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		// parent
 		// replicates what the next process slot does
 		if i != 0 {
@@ -233,12 +239,6 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int) {
 			previousBlockHeader.StateRoot =  stateRoot[:]
 		}
 		parentRoot,err := ssz.HashTreeRoot(previousBlockHeader)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		// randao
-		randaoReveal, err := signRandao(c.State, sk)
 		if err != nil {
 			log.Fatal(err)
 		}

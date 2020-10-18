@@ -26,11 +26,11 @@ func mainnetConfig() *core.ChainConfig {
 		MinAttestationInclusionDelay: 1,
 		MaxSeedLookahead: 2^2, // 4 epochs
 		MinSeedLookahead: 1, // 1 epoch
-		SlotsPerHistoricalRoot: 2 ^ 13, // ~27H
-		MinValidatorWithdrawabilityDelay: 2^8, // 256 epochs, ~27 hours
-		MinEpochsToInactivityPenalty: 2^2, // 4 epochs 25.6 min
-		EpochsPerETH1VotingPeriod: 2^5, // 32 ~3.4 hours
-		ShardCommitteePeriod: 2^8, // 256, ~27H
+		SlotsPerHistoricalRoot: 1 << 13, // ~27H
+		MinValidatorWithdrawabilityDelay: 1 << 8, // 256 epochs, ~27 hours
+		MinEpochsToInactivityPenalty: 4, // 4 epochs 25.6 min
+		EpochsPerETH1VotingPeriod: 32, // 32 ~3.4 hours
+		ShardCommitteePeriod: 1 << 8, // 256, ~27H
 
 		// initial values
 

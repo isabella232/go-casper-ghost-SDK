@@ -5,6 +5,7 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/ulule/deepcopier"
+	"log"
 )
 
 func CopyState(state *core.State) *core.State {
@@ -15,6 +16,7 @@ func CopyState(state *core.State) *core.State {
 	ret := &core.State{}
 
 	ret.CurrentSlot = state.CurrentSlot
+	ret.GenesisTime = state.GenesisTime
 
 	ret.BlockRoots = make([][]byte, len(state.BlockRoots))
 	for i, r := range state.BlockRoots {
@@ -34,52 +36,106 @@ func CopyState(state *core.State) *core.State {
 		copy(ret.RandaoMix[i], r)
 	}
 
+	ret.HistoricalRoots = make([][]byte, len(state.HistoricalRoots))
+	for i, r := range state.HistoricalRoots {
+		ret.HistoricalRoots[i] = make([]byte, len(state.HistoricalRoots[i]))
+		copy(ret.HistoricalRoots[i], r)
+	}
+
 	ret.Validators = make([]*core.Validator, len(state.Validators))
 	for i, bp := range state.Validators {
 		ret.Validators[i] = &core.Validator{}
-		deepcopier.Copy(bp).To(ret.Validators[i])
+		err := deepcopier.Copy(bp).To(ret.Validators[i])
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	ret.PreviousEpochAttestations = make([]*core.PendingAttestation, len(state.PreviousEpochAttestations))
 	for i, pe := range state.PreviousEpochAttestations {
 		ret.PreviousEpochAttestations[i] = &core.PendingAttestation{}
-		deepcopier.Copy(pe).To(ret.PreviousEpochAttestations[i])
+		err := deepcopier.Copy(pe).To(ret.PreviousEpochAttestations[i])
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	ret.CurrentEpochAttestations = make([]*core.PendingAttestation, len(state.CurrentEpochAttestations))
 	for i, pe := range state.CurrentEpochAttestations {
 		ret.CurrentEpochAttestations[i] = &core.PendingAttestation{}
-		deepcopier.Copy(pe).To(ret.CurrentEpochAttestations[i])
+		err := deepcopier.Copy(pe).To(ret.CurrentEpochAttestations[i])
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	ret.JustificationBits = make(bitfield.Bitvector4, len(state.JustificationBits))
-	deepcopier.Copy(state.JustificationBits).To(ret.JustificationBits)
+	copy(ret.JustificationBits, state.JustificationBits)
 
 	if state.PreviousJustifiedCheckpoint != nil {
 		ret.PreviousJustifiedCheckpoint = &core.Checkpoint{}
-		deepcopier.Copy(state.PreviousJustifiedCheckpoint).To(ret.PreviousJustifiedCheckpoint)
+		err := deepcopier.Copy(state.PreviousJustifiedCheckpoint).To(ret.PreviousJustifiedCheckpoint)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	ret.CurrentJustifiedCheckpoint = &core.Checkpoint{}
-	deepcopier.Copy(state.CurrentJustifiedCheckpoint).To(ret.CurrentJustifiedCheckpoint)
+	err := deepcopier.Copy(state.CurrentJustifiedCheckpoint).To(ret.CurrentJustifiedCheckpoint)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if state.FinalizedCheckpoint != nil {
 		ret.FinalizedCheckpoint = &core.Checkpoint{}
-		deepcopier.Copy(state.FinalizedCheckpoint).To(ret.FinalizedCheckpoint)
+		err := deepcopier.Copy(state.FinalizedCheckpoint).To(ret.FinalizedCheckpoint)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if state.LatestBlockHeader != nil {
 		ret.LatestBlockHeader = &core.BlockHeader{}
-		deepcopier.Copy(state.LatestBlockHeader).To(ret.LatestBlockHeader)
+		err := deepcopier.Copy(state.LatestBlockHeader).To(ret.LatestBlockHeader)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	if state.Fork != nil {
 		ret.Fork = &core.Fork{}
-		deepcopier.Copy(state.Fork).To(ret.Fork)
+		err := deepcopier.Copy(state.Fork).To(ret.Fork)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	ret.GenesisValidatorsRoot = make([]byte, len(state.GenesisValidatorsRoot))
 	copy(ret.GenesisValidatorsRoot, state.GenesisValidatorsRoot)
+
+	if state.Eth1Data != nil {
+		ret.Eth1Data = &core.ETH1Data{}
+		err := deepcopier.Copy(state.Eth1Data).To(ret.Eth1Data)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	ret.Eth1DataVotes = make([]*core.ETH1Data, len(state.Eth1DataVotes))
+	for i, v := range state.Eth1DataVotes {
+		if v != nil { // TODO - can eth1Data be nil?
+			ret.Eth1DataVotes[i] = &core.ETH1Data{}
+			err := deepcopier.Copy(v).To(ret.Eth1DataVotes[i])
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+	ret.Eth1DepositIndex = state.Eth1DepositIndex
+
+	ret.Slashings = make([]uint64, len(state.Slashings))
+	copy(ret.Slashings, state.Slashings)
 
 	return ret
 }
