@@ -20,7 +20,7 @@ func TestRandaoRevealMix(t *testing.T) {
 	sig, err := shared.SignRandao(data, domain, []byte(fmt.Sprintf("%d", proposer)))
 	require.NoError(t, err)
 	require.NoError(t, processRANDAONoVerify(state,
-		&core.PoolBlock{
+		&core.Block{
 			Slot:                 2,
 			Proposer:             0,
 			ParentRoot:           nil,

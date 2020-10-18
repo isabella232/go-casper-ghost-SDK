@@ -193,7 +193,7 @@ def process_registry_updates(state: BeaconState) -> None:
         validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
 */
 func ProcessRegistryUpdates(state *core.State) {
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		if shared.IsEligibleForActivationQueue(bp) {
 			bp.ActivationEligibilityEpoch = shared.GetCurrentEpoch(state) + 1
 		}
@@ -205,22 +205,22 @@ func ProcessRegistryUpdates(state *core.State) {
 
 	// Queue validators eligible for activation and not yet dequeued for activation
 	activationQueue := []uint64{}
-	for index, bp := range state.BlockProducers {
+	for index, bp := range state.Validators {
 		if shared.IsEligibleForActivation(state, bp) {
 			activationQueue = append(activationQueue, uint64(index))
 		}
 	}
 	// Order by the sequence of activation_eligibility_epoch setting and then index
 	sort.SliceStable(activationQueue, func(i, j int) bool {
-		if state.BlockProducers[i].ActivationEligibilityEpoch == state.BlockProducers[j].ActivationEligibilityEpoch {
+		if state.Validators[i].ActivationEligibilityEpoch == state.Validators[j].ActivationEligibilityEpoch {
 			return i < j
 		}
-		return state.BlockProducers[i].ActivationEligibilityEpoch < state.BlockProducers[j].ActivationEligibilityEpoch
+		return state.Validators[i].ActivationEligibilityEpoch < state.Validators[j].ActivationEligibilityEpoch
 	})
 
 	// Dequeued validators for activation up to churn limit
 	for index := range activationQueue[:shared.GetBPChurnLimit(state)] {
-		bp := state.BlockProducers[index]
+		bp := state.Validators[index]
 		bp.ActivationEpoch = shared.ComputeActivationExitEpoch(shared.GetCurrentEpoch(state))
 	}
 }
@@ -245,7 +245,7 @@ func ProcessSlashings(state *core.State) {
 			totalBalance,
 		)
 
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		if bp.Slashed && epoch + params.ChainConfig.EpochsPerSlashingVector / 2 == bp.WithdrawableEpoch {
 			increment := params.ChainConfig.EffectiveBalanceIncrement // Factored out from penalty numerator to avoid uint64 overflow
 			penaltyNumerator := bp.EffectiveBalance / increment * adjustedTotalSlashingBalance
@@ -295,7 +295,7 @@ func ProcessFinalUpdates(state *core.State) error {
 	}
 
 	// Update effective balances with hysteresis
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		hysteresisIncrement := params.ChainConfig.EffectiveBalanceIncrement / params.ChainConfig.HysteresisQuotient
 		downwardThreshold := hysteresisIncrement * params.ChainConfig.HysteresisDownwardMultiplier
 		upwardThreshold := hysteresisIncrement * params.ChainConfig.HysteresisUpwardMultiplier

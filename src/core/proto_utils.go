@@ -14,7 +14,7 @@ func AttestationDataEqual(att1 *AttestationData, att2 *AttestationData) bool {
 		bytes.Equal(att1.BeaconBlockRoot, att2.BeaconBlockRoot)
 }
 
-func BlockHeaderEqual(head1 *PoolBlockHeader, head2 *PoolBlockHeader) bool {
+func BlockHeaderEqual(head1 *BlockHeader, head2 *BlockHeader) bool {
 	return head1.ProposerIndex == head2.ProposerIndex &&
 		head1.Slot == head2.Slot &&
 		bytes.Equal(head1.StateRoot, head2.StateRoot) &&

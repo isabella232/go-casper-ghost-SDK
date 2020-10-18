@@ -13,7 +13,7 @@ func toByte(str string) []byte {
 }
 
 func TestBlockSigningRootOk(t *testing.T) {
-	block := &core.PoolBlock{
+	block := &core.Block{
 		Slot:                 0,
 		Proposer:             0,
 		ParentRoot:           []byte{},

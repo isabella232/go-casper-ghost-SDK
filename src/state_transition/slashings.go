@@ -67,7 +67,7 @@ func processProposerSlashing(state *core.State, slashing *core.ProposerSlashing)
 		return fmt.Errorf("proposer slashing: BP not slashable at epoch %d", shared.GetCurrentEpoch(state))
 	}
 	// Verify signatures
-	for _, sig := range []*core.SignedPoolBlockHeader{slashing.Header_1, slashing.Header_2} {
+	for _, sig := range []*core.SignedBlockHeader{slashing.Header_1, slashing.Header_2} {
 		domain, err := shared.GetDomain(state, params.ChainConfig.DomainBeaconProposer, shared.ComputeEpochAtSlot(sig.Header.Slot))
 		if err != nil {
 			return err

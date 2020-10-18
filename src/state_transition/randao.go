@@ -19,7 +19,7 @@ import (
 //    # Mix in RANDAO reveal
 //    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
 //    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
-func processRANDAO (state *core.State, block *core.PoolBlock) error {
+func processRANDAO (state *core.State, block *core.Block) error {
 	bp := shared.GetBlockProducer(state, block.Proposer)
 	if bp == nil {
 		return fmt.Errorf("could not find BP")
@@ -49,7 +49,7 @@ func processRANDAO (state *core.State, block *core.PoolBlock) error {
 //         xor(get_randao_mix(state, get_current_epoch(state)),
 //             hash(body.randao_reveal))
 //     )
-func processRANDAONoVerify(state *core.State, block *core.PoolBlock) error {
+func processRANDAONoVerify(state *core.State, block *core.Block) error {
 	latestMix := make([]byte, 32)
 	deepcopier.Copy(shared.GetLatestRandaoMix(state)).To(latestMix)
 	hash := shared.Hash(block.Body.RandaoReveal)

@@ -15,13 +15,13 @@ func TestProcessBlockHeader(t *testing.T) {
 	require.NoError(t, bls.SetETHmode(bls.EthModeDraft07))
 	tests := []struct{
 		name              string
-		block             *core.PoolBlock
+		block             *core.Block
 		signerBP          uint64
 		expectedError     error
 	}{
 		{
 			name: "valid sig",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Proposer:        13,
 				Slot:            2,
 				Body: &core.PoolBlockBody{
@@ -34,7 +34,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		},
 		{
 			name: "invalid sig",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Proposer:        13,
 				Slot:            2,
 				Body: &core.PoolBlockBody{
@@ -47,7 +47,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		},
 		{
 			name: "wrong proposer",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Proposer:        2,
 				Slot:            2,
 				Body: &core.PoolBlockBody{
@@ -60,7 +60,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		},
 		{
 			name: "invalid proposer",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Proposer:        4550000000,
 				Slot:            2,
 				Body: &core.PoolBlockBody{
@@ -73,7 +73,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		},
 		//{ // TODO ?
 		//	name: "invalid block root",
-		//	block: &core.PoolBlock{
+		//	block: &core.Block{
 		//		Proposer:        13,
 		//		Slot:            2,
 		//		Body: &core.PoolBlockBody{
@@ -87,7 +87,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		//},
 		//{ // TODO - when randao processing done
 		//	name: "RANDAO too small",
-		//	block: &core.PoolBlock{
+		//	block: &core.Block{
 		//		Proposer:        13,
 		//		Slot:            2,
 		//		Body: &core.PoolBlockBody{
@@ -100,7 +100,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		//},
 		//{ // TODO - when randao processing done
 		//	name: "RANDAO too big",
-		//	block: &core.PoolBlock{
+		//	block: &core.Block{
 		//		Proposer:        13,
 		//		Slot:            2,
 		//		Body: &core.PoolBlockBody{
@@ -113,7 +113,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		//},
 		{
 			name: "invalid parent block root",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Proposer:        13,
 				Slot:            2,
 				Body: &core.PoolBlockBody{
@@ -139,7 +139,7 @@ func TestProcessBlockHeader(t *testing.T) {
 
 
 			// header
-			signed := &core.SignedPoolBlock{
+			signed := &core.SignedBlock{
 				Block:                test.block,
 				Signature:            sig.Serialize(),
 			}

@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 )
 
-func (st *StateTransition) ProcessBlock(state *core.State, signedBlock *core.SignedPoolBlock) error {
+func (st *StateTransition) ProcessBlock(state *core.State, signedBlock *core.SignedBlock) error {
 	if err := processBlockHeader(state, signedBlock); err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (st *StateTransition) ProcessBlock(state *core.State, signedBlock *core.Sig
 	return nil
 }
 
-func (st *StateTransition) processBlockForStateRoot(state *core.State, signedBlock *core.SignedPoolBlock) error {
+func (st *StateTransition) processBlockForStateRoot(state *core.State, signedBlock *core.SignedBlock) error {
 	if err := processBlockHeaderNoVerify(state, signedBlock); err != nil {
 		return err
 	}
@@ -37,9 +37,6 @@ func (st *StateTransition) processBlockForStateRoot(state *core.State, signedBlo
 		if err := processAttestationNoSigVerify(state, att); err != nil {
 			return err
 		}
-	}
-	if err := ProcessNewPoolRequests(state, signedBlock.Block.Body.NewPoolReq); err != nil {
-		return err
 	}
 	return nil
 }
@@ -68,7 +65,7 @@ func (st *StateTransition) processBlockForStateRoot(state *core.State, signedBlo
 //    assert not proposer.slashed
 //    # Verify proposer signature
 //    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
-func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedPoolBlock) error {
+func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedBlock) error {
 	block := signedBlock.Block
 
 	// slot
@@ -100,7 +97,7 @@ func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedPoolB
 	if err != nil {
 		return err
 	}
-	state.LatestBlockHeader = &core.PoolBlockHeader{
+	state.LatestBlockHeader = &core.BlockHeader{
 		Slot:                 block.Slot,
 		ProposerIndex:        block.Proposer,
 		ParentRoot:           block.ParentRoot,
@@ -112,7 +109,7 @@ func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedPoolB
 	return nil
 }
 
-func processBlockHeader(state *core.State, signedBlock *core.SignedPoolBlock) error {
+func processBlockHeader(state *core.State, signedBlock *core.SignedBlock) error {
 	if err := processBlockHeaderNoVerify(state, signedBlock); err != nil {
 		return err
 	}
@@ -122,7 +119,7 @@ func processBlockHeader(state *core.State, signedBlock *core.SignedPoolBlock) er
 	return nil
 }
 
-func verifyBlockSig(state *core.State, signedBlock *core.SignedPoolBlock) error {
+func verifyBlockSig(state *core.State, signedBlock *core.SignedBlock) error {
 	block := signedBlock.Block
 	epoch := shared.GetCurrentEpoch(state)
 
@@ -200,9 +197,6 @@ func processOperations(state *core.State, st *StateTransition, body *core.PoolBl
 		return err
 	}
 	if err := ProcessExits(state, body.VoluntaryExits); err != nil {
-		return err
-	}
-	if err := ProcessNewPoolRequests(state, body.NewPoolReq); err != nil {
 		return err
 	}
 

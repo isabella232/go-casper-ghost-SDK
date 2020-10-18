@@ -19,12 +19,12 @@ func TestAttestationProcessing(t *testing.T) {
 	state := generateTestState(t, 34)
 	tests := []struct{
 		name string
-		block *core.PoolBlock
+		block *core.Block
 		expectedError error
 	}{
 		{
 			name: "valid block attestation epoch 0",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Slot:                 2,
 				Proposer:             0,
 				ParentRoot:           nil,
@@ -46,7 +46,7 @@ func TestAttestationProcessing(t *testing.T) {
 		},
 		{
 			name: "valid block attestation epoch 1 with source epoch 0",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Slot:                 33,
 				Proposer:             0,
 				ParentRoot:           nil,
@@ -68,7 +68,7 @@ func TestAttestationProcessing(t *testing.T) {
 		},
 		{
 			name: "threshold sig not achieved",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Slot:                 32,
 				Proposer:             0,
 				ParentRoot:           nil,
@@ -90,7 +90,7 @@ func TestAttestationProcessing(t *testing.T) {
 		},
 		{
 			name: "target epoch invalid",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Slot:                 32,
 				Proposer:             0,
 				ParentRoot:           nil,
@@ -112,7 +112,7 @@ func TestAttestationProcessing(t *testing.T) {
 		},
 		{
 			name: "target slot not in the correct epoch",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Slot:                 32,
 				Proposer:             0,
 				ParentRoot:           nil,
@@ -134,7 +134,7 @@ func TestAttestationProcessing(t *testing.T) {
 		},
 		{
 			name: "min att. inclusion delay did not pass",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Slot:                 32,
 				Proposer:             0,
 				ParentRoot:           nil,
@@ -156,7 +156,7 @@ func TestAttestationProcessing(t *testing.T) {
 		},
 		{
 			name: "slot to submit att. has passed",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Slot:                 32,
 				Proposer:             0,
 				ParentRoot:           nil,

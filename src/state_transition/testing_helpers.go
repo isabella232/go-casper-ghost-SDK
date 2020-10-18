@@ -36,21 +36,6 @@ func generateAttestations(
 		BeaconBlockRoot:      []byte("block root"),
 		Source:               sourceCheckpoint,
 		Target:               targetCheckpoint,
-		ExecutionSummaries:   []*core.ExecutionSummary{
-			&core.ExecutionSummary{
-				PoolId: 3,
-				Epoch:  shared.ComputeEpochAtSlot(slot),
-				Duties:               []*core.BeaconDuty{
-					&core.BeaconDuty{
-						Type:                 dutyType, // attestation
-						Committee:            12,
-						Slot:                 342,
-						Finalized:            finalized,
-						Participation:        []byte{1,3,88},
-					},
-				},
-			},
-		},
 	}
 
 	// sign
@@ -102,14 +87,13 @@ func generateTestState(t *testing.T, headSlot int) *core.State {
 	pools := make([]*core.Pool, 12)
 
 	// block producers
-	bps := make([]*core.BlockProducer, len(pools) * int(params.ChainConfig.VaultSize))
+	bps := make([]*core.Validator, len(pools) * int(params.ChainConfig.VaultSize))
 	for i := 0 ; i < len(bps) ; i++ {
 		sk := &bls.SecretKey{}
 		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
 
-		bps[i] = &core.BlockProducer{
+		bps[i] = &core.Validator {
 			Id:      uint64(i),
-			CDTBalance: 1000,
 			EffectiveBalance:   32,
 			Balance : 32,
 			Slashed: false,
@@ -138,8 +122,7 @@ func generateTestState(t *testing.T, headSlot int) *core.State {
 
 	ret := &core.State {
 		CurrentSlot: 0,
-		Pools: pools,
-		BlockProducers: bps,
+		Validators:  bps,
 		Randao:          []*core.SlotAndBytes{
 			&core.SlotAndBytes{
 				Slot:	0,
@@ -222,7 +205,7 @@ func populateJustificationAndFinalization(
 
 // will generate and save blocks from slot 0 until maxBlocks
 func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, error) {
-	var previousBlockHeader *core.PoolBlockHeader
+	var previousBlockHeader *core.BlockHeader
 	for i := 0 ; i < maxBlocks ; i++ {
 		// get proposer
 		pID, err := shared.GetBlockProposerIndex(state)
@@ -252,7 +235,7 @@ func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, erro
 			return nil, err
 		}
 
-		block := &core.PoolBlock{
+		block := &core.Block{
 			Slot:                 uint64(i),
 			Proposer:             pID,
 			ParentRoot:           parentRoot[:],
@@ -268,7 +251,7 @@ func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, erro
 		st := NewStateTransition()
 
 		// compute state root
-		root, err := st.ComputeStateRoot(state, &core.SignedPoolBlock{
+		root, err := st.ComputeStateRoot(state, &core.SignedBlock{
 			Block:                block,
 			Signature:            []byte{},
 		})
@@ -288,7 +271,7 @@ func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, erro
 		}
 
 		// execute
-		state, err = st.ExecuteStateTransition(state, &core.SignedPoolBlock{
+		state, err = st.ExecuteStateTransition(state, &core.SignedBlock{
 			Block:                block,
 			Signature:            sig.Serialize(),
 		})
@@ -297,7 +280,7 @@ func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, erro
 		}
 
 		// copy to previousBlockRoot
-		previousBlockHeader = &core.PoolBlockHeader{}
+		previousBlockHeader = &core.BlockHeader{}
 		deepcopier.Copy(state.LatestBlockHeader).To(previousBlockHeader)
 	}
 	return state, nil

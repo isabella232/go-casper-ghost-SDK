@@ -27,7 +27,7 @@ type IStateTransition interface {
 	//        assert block.state_root == hash_tree_root(state)
 	//    # Return post-state
 	//    return state
-	ExecuteStateTransition(state *core.State, signedBlock *core.SignedPoolBlock) (newState *core.State, err error)
+	ExecuteStateTransition(state *core.State, signedBlock *core.SignedBlock) (newState *core.State, err error)
 
 	// ComputeStateRoot defines the procedure for a state transition function.
 	// This does not validate any BLS signatures in a block, it is used for calculating the
@@ -45,7 +45,7 @@ type IStateTransition interface {
 	//    process_block(state, block)
 	//    # Return post-state
 	//    return state
-	ComputeStateRoot(state *core.State, signedBlock *core.SignedPoolBlock) ([32]byte, error)
+	ComputeStateRoot(state *core.State, signedBlock *core.SignedBlock) ([32]byte, error)
 
 	// ProcessBlock creates a new, modified beacon state by applying block operation
 	// transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
@@ -58,7 +58,7 @@ type IStateTransition interface {
 	//    process_randao(state, block.block)
 	//    process_eth1_data(state, block.block)
 	//    process_operations(state, block.block)
-	ProcessBlock(state *core.State, newBlockBody *core.SignedPoolBlock) error
+	ProcessBlock(state *core.State, newBlockBody *core.SignedBlock) error
 	// ProcessSlots process through skip slots and apply epoch transition when it's needed
 	//
 	// Spec pseudocode definition:
@@ -77,7 +77,7 @@ type IStateTransition interface {
 type StateTransition struct {}
 func NewStateTransition() *StateTransition { return &StateTransition{} }
 
-func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock *core.SignedPoolBlock) (newState *core.State, err error) {
+func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock *core.SignedBlock) (newState *core.State, err error) {
 	log.Printf("processing block at slot %d\n", signedBlock.Block.Slot)
 	newState = shared.CopyState(state)
 
@@ -101,7 +101,7 @@ func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock 
 }
 
 
-func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core.SignedPoolBlock) ([32]byte, error) {
+func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core.SignedBlock) ([32]byte, error) {
 	stateCopy := shared.CopyState(state)
 
 	if err := st.ProcessSlots(stateCopy, signedBlock.Block.Slot); err != nil {

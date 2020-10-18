@@ -16,7 +16,7 @@ func TestRandaoSeedMix(t *testing.T) {
 	require.NoError(t, bls.SetETHmode(bls.EthModeDraft07))
 
 	state := generateTestState(t, 3)
-	block := &core.PoolBlock{
+	block := &core.Block{
 		Proposer:        2713,
 		Slot:            35,
 		Body: &core.PoolBlockBody{
@@ -39,12 +39,12 @@ func TestStateTransitionExecution(t *testing.T) {
 
 	tests := []struct{
 		name          string
-		block         *core.PoolBlock
+		block         *core.Block
 		expectedError error
 	}{
 		{
 			name: "valid post state root",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Proposer:        13,
 				Slot:            2,
 				Body: &core.PoolBlockBody{
@@ -57,7 +57,7 @@ func TestStateTransitionExecution(t *testing.T) {
 		},
 		{
 			name: "invalid post state root",
-			block: &core.PoolBlock{
+			block: &core.Block{
 				Proposer:        13,
 				Slot:            2,
 				Body: &core.PoolBlockBody{
@@ -82,7 +82,7 @@ func TestStateTransitionExecution(t *testing.T) {
 			require.NoError(t, err)
 
 			// header
-			signed := &core.SignedPoolBlock{
+			signed := &core.SignedBlock{
 				Block:                test.block,
 				Signature:            sig.Serialize(),
 			}

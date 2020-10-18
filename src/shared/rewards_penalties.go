@@ -98,7 +98,7 @@ def get_eligible_validator_indices(state: BeaconState) -> Sequence[ValidatorInde
 func GetEligibleBpIndices(state *core.State) []uint64 {
 	ret := []uint64{}
 	prevEpoch := GetPreviousEpoch(state)
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		if IsActiveBP(bp, prevEpoch) || (bp.Slashed && prevEpoch + 1 < bp.WithdrawableEpoch) {
 			ret = append(ret, bp.Id)
 		}
@@ -133,8 +133,8 @@ def get_attestation_component_deltas(state: BeaconState,
     return rewards, penalties
  */
 func GetAttestationComponentDeltas(state *core.State, attestations []*core.PendingAttestation) ([]uint64, []uint64, error) {
-	rewards := uint64ZeroArray(uint64(len(state.BlockProducers)))
-	penalties := uint64ZeroArray(uint64(len(state.BlockProducers)))
+	rewards := uint64ZeroArray(uint64(len(state.Validators)))
+	penalties := uint64ZeroArray(uint64(len(state.Validators)))
 	totalStake := GetTotalActiveStake(state)
 	unslashedAttestingIndices, err := GetUnslashedAttestingIndices(state, attestations)
 	if err != nil {
@@ -243,7 +243,7 @@ def get_inclusion_delay_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequ
     return rewards, penalties
  */
 func GetInclusionDelayDeltas(state *core.State) ([]uint64, []uint64, error) {
-	rewards := uint64ZeroArray(uint64(len(state.BlockProducers)))
+	rewards := uint64ZeroArray(uint64(len(state.Validators)))
 	matchingSourceAttestations, err := GetMatchingSourceAttestations(state, GetPreviousEpoch(state))
 	if err != nil {
 		return nil, nil, err
@@ -293,7 +293,7 @@ func GetInclusionDelayDeltas(state *core.State) ([]uint64, []uint64, error) {
 	}
 
 	// No penalties associated with inclusion delay
-	penalties := uint64ZeroArray(uint64(len(state.BlockProducers)))
+	penalties := uint64ZeroArray(uint64(len(state.Validators)))
 	return rewards, penalties, nil
 }
 
@@ -319,7 +319,7 @@ def get_inactivity_penalty_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], S
     return rewards, penalties
  */
 func GetInactivityPenaltyDeltas(state *core.State) ([]uint64, []uint64, error) {
-	penalties := uint64ZeroArray(uint64(len(state.BlockProducers)))
+	penalties := uint64ZeroArray(uint64(len(state.Validators)))
 	if IsInInactivityLeak(state) {
 		matchingTargetAttestations, err := GetMatchingTargetAttestations(state, GetPreviousEpoch(state))
 		if err != nil {
@@ -352,7 +352,7 @@ func GetInactivityPenaltyDeltas(state *core.State) ([]uint64, []uint64, error) {
 	}
 
 	// No rewards associated with inactivity penalties
-	rewards := uint64ZeroArray(uint64(len(state.BlockProducers)))
+	rewards := uint64ZeroArray(uint64(len(state.Validators)))
 	return rewards, penalties, nil
 }
 
@@ -401,13 +401,13 @@ func GetAttestationDeltas(state *core.State) ([]uint64, []uint64, error) {
 		return nil, nil, err
 	}
 
-	rewards := uint64ZeroArray(uint64(len(state.BlockProducers)))
-	for i := range state.BlockProducers {
+	rewards := uint64ZeroArray(uint64(len(state.Validators)))
+	for i := range state.Validators {
 		rewards[i] = sourceRewards[i] + targetRewards[i] + headRewards[i] + inclusioDelayRewards[i]
 	}
 
-	penalties := uint64ZeroArray(uint64(len(state.BlockProducers)))
-	for i := range state.BlockProducers {
+	penalties := uint64ZeroArray(uint64(len(state.Validators)))
+	for i := range state.Validators {
 		penalties[i] = sourcePenalties[i] + targetPenalties[i] + headPenalties[i] + inactivityPenalties[i]
 	}
 
@@ -435,7 +435,7 @@ func ProcessRewardsAndPenalties(state *core.State) error {
 		return err
 	}
 
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		IncreaseBalance(state, bp.Id, rewards[bp.Id])
 		DecreaseBalance(state, bp.Id, penalties[bp.Id])
 	}

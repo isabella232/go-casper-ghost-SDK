@@ -14,7 +14,7 @@ import (
 		"""
 		return validator.activation_epoch <= epoch < validator.exit_epoch
  */
-func IsActiveBP(bp *core.BlockProducer, epoch uint64) bool {
+func IsActiveBP(bp *core.Validator, epoch uint64) bool {
 	return bp.ActivationEpoch <= epoch && epoch < bp.ExitEpoch
 }
 
@@ -28,7 +28,7 @@ func IsActiveBP(bp *core.BlockProducer, epoch uint64) bool {
 			and validator.effective_balance == MAX_EFFECTIVE_BALANCE
 		)
 */
-func IsEligibleForActivationQueue(bp *core.BlockProducer) bool {
+func IsEligibleForActivationQueue(bp *core.Validator) bool {
 	return bp.ActivationEligibilityEpoch == params.ChainConfig.FarFutureEpoch && bp.EffectiveBalance == params.ChainConfig.MaxEffectiveBalance
 }
 
@@ -44,7 +44,7 @@ func IsEligibleForActivationQueue(bp *core.BlockProducer) bool {
 			and validator.activation_epoch == FAR_FUTURE_EPOCH
 		)
  */
-func IsEligibleForActivation(state *core.State, bp *core.BlockProducer) bool {
+func IsEligibleForActivation(state *core.State, bp *core.Validator) bool {
 	return bp.ActivationEligibilityEpoch <= state.FinalizedCheckpoint.Epoch && // Placement in queue is finalized
 					bp.ActivationEpoch == params.ChainConfig.FarFutureEpoch // Has not yet been activated
 }
@@ -56,7 +56,7 @@ func IsEligibleForActivation(state *core.State, bp *core.BlockProducer) bool {
 		"""
 		return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
  */
-func IsSlashableBp(bp *core.BlockProducer, epoch uint64) bool {
+func IsSlashableBp(bp *core.Validator, epoch uint64) bool {
 	return !bp.Slashed && (bp.ActivationEpoch <= epoch && epoch < bp.WithdrawableEpoch)
 }
 
@@ -126,7 +126,7 @@ def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[V
  */
 func GetActiveBlockProducers(state *core.State, epoch uint64) []uint64 {
 	var activeBps []uint64
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		if IsActiveBP(bp, epoch) {
 			activeBps = append(activeBps, bp.GetId())
 		}
@@ -233,7 +233,7 @@ func InitiateBlockProducerExit(state *core.State, index uint64) {
 
 	// Compute exit queue epoch
 	exitEpochs := []uint64{}
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		if bp.ExitEpoch != params.ChainConfig.FarFutureEpoch {
 			exitEpochs = append(exitEpochs, bp.ExitEpoch)
 		}
@@ -250,7 +250,7 @@ func InitiateBlockProducerExit(state *core.State, index uint64) {
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
 	exitQueueChurn := 0
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		if bp.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn ++
 		}
@@ -310,9 +310,9 @@ func SlashBlockProducer(state *core.State, slashedIndex uint64) error {
 	return nil
 }
 
-func BPByPubkey(state *core.State, pk []byte) *core.BlockProducer {
+func BPByPubkey(state *core.State, pk []byte) *core.Validator {
 	// TODO - BPByPubkey optimize with some kind of map
-	for _, bp := range state.BlockProducers {
+	for _, bp := range state.Validators {
 		if bytes.Equal(pk, bp.PubKey) {
 			return bp
 		}

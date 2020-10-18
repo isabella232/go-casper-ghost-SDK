@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 )
 
-func SignBlock(block *core.PoolBlock, sk []byte, domain []byte) (*bls.Sign, error) {
+func SignBlock(block *core.Block, sk []byte, domain []byte) (*bls.Sign, error) {
 	root, err := BlockSigningRoot(block, domain)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func SignBlock(block *core.PoolBlock, sk []byte, domain []byte) (*bls.Sign, erro
 	return sig, nil
 }
 
-func VerifyBlockSigningRoot(block *core.PoolBlock, pubKey []byte, sigByts []byte, domain []byte) error {
+func VerifyBlockSigningRoot(block *core.Block, pubKey []byte, sigByts []byte, domain []byte) error {
 	root, err := BlockSigningRoot(block, domain)
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func VerifyBlockSigningRoot(block *core.PoolBlock, pubKey []byte, sigByts []byte
 	return nil
 }
 
-func BlockSigningRoot(block *core.PoolBlock, domain []byte) ([32]byte, error) {
+func BlockSigningRoot(block *core.Block, domain []byte) ([32]byte, error) {
 	root, err := ssz.HashTreeRoot(block)
 	if err != nil {
 		return [32]byte{}, err

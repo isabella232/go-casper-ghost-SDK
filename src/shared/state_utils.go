@@ -34,16 +34,10 @@ func CopyState(state *core.State) *core.State {
 		deepcopier.Copy(r).To(ret.Randao[i])
 	}
 
-	ret.BlockProducers = make([]*core.BlockProducer, len(state.BlockProducers))
-	for i, bp := range state.BlockProducers {
-		ret.BlockProducers[i] = &core.BlockProducer{}
-		deepcopier.Copy(bp).To(ret.BlockProducers[i])
-	}
-
-	ret.Pools = make([]*core.Pool, len(state.Pools))
-	for i, p := range state.Pools {
-		ret.Pools[i] = &core.Pool{}
-		deepcopier.Copy(p).To(ret.Pools[i])
+	ret.Validators = make([]*core.Validator, len(state.Validators))
+	for i, bp := range state.Validators {
+		ret.Validators[i] = &core.Validator{}
+		deepcopier.Copy(bp).To(ret.Validators[i])
 	}
 
 	ret.PreviousEpochAttestations = make([]*core.PendingAttestation, len(state.PreviousEpochAttestations))
@@ -75,7 +69,7 @@ func CopyState(state *core.State) *core.State {
 	}
 
 	if state.LatestBlockHeader != nil {
-		ret.LatestBlockHeader = &core.PoolBlockHeader{}
+		ret.LatestBlockHeader = &core.BlockHeader{}
 		deepcopier.Copy(state.LatestBlockHeader).To(ret.LatestBlockHeader)
 	}
 
@@ -83,19 +77,9 @@ func CopyState(state *core.State) *core.State {
 }
 
 // will return nil if not found or inactive
-func GetBlockProducer(state *core.State, id uint64) *core.BlockProducer {
-	for _, p := range state.BlockProducers {
+func GetBlockProducer(state *core.State, id uint64) *core.Validator {
+	for _, p := range state.Validators {
 		if p.GetId() == id && p.Active {
-			return p
-		}
-	}
-	return nil
-}
-
-// will return nil if not found
-func GetPool(state *core.State, id uint64) *core.Pool {
-	for _, p := range state.Pools {
-		if p.GetId() == id {
 			return p
 		}
 	}

@@ -89,7 +89,7 @@ func processDeposit(state *core.State, deposit *core.Deposit) error {
 		}
 
 		// Add validator and balance entries
-		state.BlockProducers = append(state.BlockProducers, GetBPFromDeposit(state, deposit))
+		state.Validators = append(state.Validators, GetBPFromDeposit(state, deposit))
 	} else {
 		// Increase balance by deposit amount
 		shared.IncreaseBalance(state, bp.Id, amount)
@@ -139,14 +139,13 @@ def get_validator_from_deposit(state: BeaconState, deposit: Deposit) -> Validato
         effective_balance=effective_balance,
     )
  */
-func GetBPFromDeposit(state *core.State, deposit *core.Deposit) *core.BlockProducer {
+func GetBPFromDeposit(state *core.State, deposit *core.Deposit) *core.Validator {
 	amount := deposit.Data.Amount
 	effBalance := shared.Min(amount - amount % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
 
-	return &core.BlockProducer{
-		Id:                         uint64(len(state.BlockProducers)),
+	return &core.Validator {
+		Id:                         uint64(len(state.Validators)),
 		PubKey:                     deposit.Data.PublicKey,
-		CDTBalance:                 0,
 		EffectiveBalance:           effBalance,
 		Balance:                    effBalance,
 		Slashed:                    false,

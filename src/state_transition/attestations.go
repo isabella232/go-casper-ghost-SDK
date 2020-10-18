@@ -68,9 +68,6 @@ func processAttestationNoSigVerify(state *core.State, attestation *core.Attestat
 	if err := appendPendingAttestation(state, attestation); err != nil {
 		return err
 	}
-	if err := ProcessExecutionSummaries(state, attestation.Data.ExecutionSummaries); err != nil {
-		return err
-	}
 	return nil
 }
 

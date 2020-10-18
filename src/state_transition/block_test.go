@@ -47,7 +47,7 @@ func TestBlockApplyConsistency(t *testing.T) {
 	require.NoError(t, bls.SetETHmode(bls.EthModeDraft07))
 
 	state := generateTestState(t, 3)
-	block := &core.PoolBlock{
+	block := &core.Block{
 		Slot:                 2,
 		Proposer:             13,
 		ParentRoot:           toByte("71dcfc4567f947c7c396f293a615b3e46554a83595703399107d1b87d6b6ae3c"),
@@ -76,7 +76,7 @@ func TestBlockApplyConsistency(t *testing.T) {
 		[]byte(fmt.Sprintf("%d", 13)),
 		blockDomain)
 	require.NoError(t, err)
-	signed := &core.SignedPoolBlock{
+	signed := &core.SignedBlock{
 		Block:                block,
 		Signature:            sig.Serialize(),
 	}
