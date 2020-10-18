@@ -14,10 +14,10 @@ func Bytes4(x uint64) []byte {
 	return bytes[:4]
 }
 
-func testConfig() *core.PoolsChainConfig {
+func testConfig() *core.ChainConfig {
 	genesisSeed,_ := hex.DecodeString("sdddseedseedseedseedseedseedseed")
 
-	return &core.PoolsChainConfig{
+	return &core.ChainConfig{
 		// Time
 		SlotsInEpoch:                32,
 		MinAttestationInclusionDelay: 1,
