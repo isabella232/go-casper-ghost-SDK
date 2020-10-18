@@ -3,7 +3,7 @@ package state;
 
 option go_package = ".;core";
 
-message PoolsChainConfig {
+message ChainConfig {
   // Time
   uint64 SlotsInEpoch = 100;
   uint64 MinAttestationInclusionDelay = 101;
