@@ -19,6 +19,38 @@ func toByte(str string) []byte {
 	return ret
 }
 
+type StateTestContext struct {
+	State *core.State
+}
+
+func NewStateTestContext(config *core.PoolsChainConfig) *StateTestContext {
+	return &StateTestContext{
+		State: &core.State{
+			GenesisTime:                 0,
+			CurrentSlot:                 0,
+			LatestBlockHeader:           nil,
+			Fork:                        nil,
+			BlockRoots:                  nil,
+			StateRoots:                  nil,
+			RandaoMix:                   nil,
+			HistoricalRoots:             nil,
+			GenesisValidatorsRoot:       nil,
+			PreviousEpochAttestations:   nil,
+			CurrentEpochAttestations:    nil,
+			JustificationBits:           nil,
+			PreviousJustifiedCheckpoint: nil,
+			CurrentJustifiedCheckpoint:  nil,
+			FinalizedCheckpoint:         nil,
+			Eth1Data:                    nil,
+			Eth1DataVotes:               nil,
+			Eth1DepositIndex:            0,
+			Validators:                  nil,
+			Slashings:                   nil,
+		},
+	}
+}
+
+
 func generateAttestations(
 	state *core.State,
 	howManyBpSig uint64,
