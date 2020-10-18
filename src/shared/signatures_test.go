@@ -18,7 +18,7 @@ func TestBlockSigningRootOk(t *testing.T) {
 		Proposer:             0,
 		ParentRoot:           []byte{},
 		StateRoot:            []byte{},
-		Body:                 &core.PoolBlockBody{
+		Body:                 &core.BlockBody{
 			RandaoReveal:         []byte{},
 			Attestations:         []*core.Attestation{},
 			NewPoolReq:           []*core.CreateNewPoolRequest{},

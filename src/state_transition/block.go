@@ -144,7 +144,7 @@ def process_eth1_data(state: BeaconState, body: BeaconBlockBody) -> None:
     if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
         state.eth1_data = body.eth1_data
  */
-func processEth1Data(state *core.State, body *core.PoolBlockBody) error {
+func processEth1Data(state *core.State, body *core.BlockBody) error {
 	state.Eth1DataVotes = append(state.Eth1DataVotes, body.Eth1Data)
 
 	// count support
@@ -178,7 +178,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     for_ops(body.deposits, process_deposit)
     for_ops(body.voluntary_exits, process_voluntary_exit)
  */
-func processOperations(state *core.State, st *StateTransition, body *core.PoolBlockBody) error {
+func processOperations(state *core.State, st *StateTransition, body *core.BlockBody) error {
 	// Verify that outstanding deposits are processed up to the maximum number of deposits
 	if uint64(len(body.Deposits)) != shared.Min(params.ChainConfig.MaxDeposits, state.Eth1Data.DepositCount - state.Eth1DepositIndex) {
 		return fmt.Errorf("number of deposits in body invalid")

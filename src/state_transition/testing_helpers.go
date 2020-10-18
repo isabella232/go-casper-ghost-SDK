@@ -84,10 +84,8 @@ func generateTestState(t *testing.T, headSlot int) *core.State {
 	require.NoError(t, bls.Init(bls.BLS12_381))
 	require.NoError(t, bls.SetETHmode(bls.EthModeDraft07))
 
-	pools := make([]*core.Pool, 12)
-
 	// block producers
-	bps := make([]*core.Validator, len(pools) * int(params.ChainConfig.VaultSize))
+	bps := make([]*core.Validator, 124)
 	for i := 0 ; i < len(bps) ; i++ {
 		sk := &bls.SecretKey{}
 		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
@@ -103,22 +101,22 @@ func generateTestState(t *testing.T, headSlot int) *core.State {
 	}
 
 	// vaults (pool)
-	for i := 0 ; i < len(pools) ; i++ {
-		executors := make([]uint64, params.ChainConfig.VaultSize)
-		for j := 0 ; j < int(params.ChainConfig.VaultSize) ; j++ {
-			executors[j] = bps[i*int(params.ChainConfig.VaultSize) + j].GetId()
-		} // no need to sort as they are already
-
-		sk := &bls.SecretKey{}
-		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
-
-		pools[i] = &core.Pool{
-			Id:              uint64(i),
-			SortedCommittee: executors,
-			PubKey:          sk.GetPublicKey().Serialize(),
-			Active:true,
-		}
-	}
+	//for i := 0 ; i < len(pools) ; i++ {
+	//	executors := make([]uint64, params.ChainConfig.VaultSize)
+	//	for j := 0 ; j < int(params.ChainConfig.VaultSize) ; j++ {
+	//		executors[j] = bps[i*int(params.ChainConfig.VaultSize) + j].GetId()
+	//	} // no need to sort as they are already
+	//
+	//	sk := &bls.SecretKey{}
+	//	sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
+	//
+	//	pools[i] = &core.Pool{
+	//		Id:              uint64(i),
+	//		SortedCommittee: executors,
+	//		PubKey:          sk.GetPublicKey().Serialize(),
+	//		Active:true,
+	//	}
+	//}
 
 	ret := &core.State {
 		CurrentSlot: 0,
@@ -240,10 +238,9 @@ func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, erro
 			Proposer:             pID,
 			ParentRoot:           parentRoot[:],
 			StateRoot:            params.ChainConfig.ZeroHash,
-			Body:                 &core.PoolBlockBody{
+			Body:                 &core.BlockBody{
 				RandaoReveal:         randaoReveal.Serialize(),
 				Attestations:         []*core.Attestation{},
-				NewPoolReq:           []*core.CreateNewPoolRequest{},
 			},
 		}
 

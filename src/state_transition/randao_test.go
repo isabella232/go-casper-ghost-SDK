@@ -25,7 +25,7 @@ func TestRandaoRevealMix(t *testing.T) {
 			Proposer:             0,
 			ParentRoot:           nil,
 			StateRoot:            nil,
-			Body:                 &core.PoolBlockBody{
+			Body:                 &core.BlockBody{
 				RandaoReveal: sig.Serialize(),
 				Attestations: nil,
 			},

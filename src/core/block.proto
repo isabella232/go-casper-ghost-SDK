@@ -1,0 +1,141 @@
+syntax = "proto3";
+package state;
+
+option go_package = ".;core";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "src/core/attestation.proto";
+
+message BlockBody {
+  // The validators RANDAO reveal 96 byte value.
+  bytes randao_reveal = 1 [(gogoproto.moretags) = "ssz-size:\"96\""];
+
+  ETH1Data Eth1Data = 2;
+
+  // 32 byte field of arbitrary data. This field may contain any data and
+  // is not used for anything other than a fun message.
+  bytes graffiti = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
+  // At most MAX_PROPOSER_SLASHINGS.
+  repeated ProposerSlashing proposer_slashings = 4 [(gogoproto.moretags) = "ssz-max:\"16\""];
+
+  // At most MAX_ATTESTER_SLASHINGS.
+  repeated AttesterSlashing attester_slashings = 5 [(gogoproto.moretags) = "ssz-max:\"2\""];
+
+  // At most MAX_ATTESTATIONS.
+  repeated Attestation attestations = 6 [(gogoproto.moretags) = "ssz-max:\"128\""];
+
+  // At most MAX_DEPOSITS.
+  repeated Deposit deposits = 7 [(gogoproto.moretags) = "ssz-max:\"16\""];
+
+  // At most MAX_VOLUNTARY_EXITS.
+  repeated SignedVoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz-max:\"16\""];
+}
+
+message Deposit {
+  message DepositData {
+    // 48 byte BLS public key of the validator.
+    bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
+
+    // A 32 byte hash of the withdrawal address public key.
+    bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
+    // Deposit amount in gwei.
+    uint64 amount = 3;
+
+    // 96 byte signature from the validators public key.
+    bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
+  }
+  repeated bytes Proof = 1;
+  DepositData Data = 2;
+}
+
+message DepositMessage {
+  // 48 byte BLS public key of the validator.
+  bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
+
+  // A 32 byte hash of the withdrawal address public key.
+  bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+
+  // Deposit amount in gwei.
+  uint64 amount = 3;
+}
+
+message DepositData {
+
+}
+
+message Block {
+  uint64 Slot = 1;
+  uint64 Proposer = 2;
+  bytes ParentRoot = 3;
+  bytes StateRoot = 4;
+  BlockBody Body = 5;
+}
+
+message SignedBlock {
+  Block Block = 1;
+  bytes Signature = 2;
+}
+
+message BlockHeader {
+  uint64 Slot = 1;
+  uint64 ProposerIndex = 2;
+  bytes ParentRoot = 3;
+  bytes StateRoot = 4;
+  bytes BodyRoot = 5;
+}
+
+message SignedBlockHeader {
+  // The unsigned beacon block header itself.
+  BlockHeader header = 1;
+
+  // 96 byte BLS signature from the validator that produced this block header.
+  bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+}
+
+message ETH1Data {
+  bytes DepositRoot = 1;
+  uint64 DepositCount = 2;
+  bytes BlockHash = 3;
+}
+
+// Proposer slashings are proofs that a slashable offense has been committed by
+// proposing two conflicting blocks from the same validator.
+message ProposerSlashing {
+  // First conflicting signed block header.
+  SignedBlockHeader header_1 = 2;
+
+  // Second conflicting signed block header.
+  SignedBlockHeader header_2 = 3;
+}
+
+// Attestor slashings are proofs that a slashable offense has been committed by
+// attestating to two conflicting pieces of information by the same validator.
+message AttesterSlashing {
+  // First conflicting attestation.
+  IndexedAttestation attestation_1 = 1;
+
+  // Second conflicting attestation.
+  IndexedAttestation attestation_2 = 2;
+}
+
+// A message that represents a validator signaling that they want to voluntarily
+// withdraw from the active validator set. The message does not contain a
+// validator signature.
+message VoluntaryExit {
+  // The epoch on when exit request becomes valid.
+  uint64 epoch = 1;
+
+  // Index of the exiting validator.
+  uint64 validator_index = 2;
+}
+
+// The signed version of voluntary exit.
+message SignedVoluntaryExit {
+  // The unsigned voluntary exit itself.
+  VoluntaryExit exit = 1;
+
+  // Validator's 96 byte signature
+  bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
+}

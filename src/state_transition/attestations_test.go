@@ -29,7 +29,7 @@ func TestAttestationProcessing(t *testing.T) {
 				Proposer:             0,
 				ParentRoot:           nil,
 				StateRoot:            nil,
-				Body:                 &core.PoolBlockBody{
+				Body:                 &core.BlockBody{
 					Attestations:         generateAttestations(
 						state,
 						thresholdSig,
@@ -51,7 +51,7 @@ func TestAttestationProcessing(t *testing.T) {
 				Proposer:             0,
 				ParentRoot:           nil,
 				StateRoot:            nil,
-				Body:                 &core.PoolBlockBody{
+				Body:                 &core.BlockBody{
 					Attestations:         generateAttestations(
 						state,
 						thresholdSig,
@@ -73,7 +73,7 @@ func TestAttestationProcessing(t *testing.T) {
 				Proposer:             0,
 				ParentRoot:           nil,
 				StateRoot:            nil,
-				Body:                 &core.PoolBlockBody{
+				Body:                 &core.BlockBody{
 					Attestations:         generateAttestations(
 						state,
 						thresholdSig - 1,
@@ -95,7 +95,7 @@ func TestAttestationProcessing(t *testing.T) {
 				Proposer:             0,
 				ParentRoot:           nil,
 				StateRoot:            nil,
-				Body:                 &core.PoolBlockBody{
+				Body:                 &core.BlockBody{
 					Attestations:         generateAttestations(
 						state,
 						thresholdSig,
@@ -117,7 +117,7 @@ func TestAttestationProcessing(t *testing.T) {
 				Proposer:             0,
 				ParentRoot:           nil,
 				StateRoot:            nil,
-				Body:                 &core.PoolBlockBody{
+				Body:                 &core.BlockBody{
 					Attestations:         generateAttestations(
 						state,
 						thresholdSig,
@@ -139,7 +139,7 @@ func TestAttestationProcessing(t *testing.T) {
 				Proposer:             0,
 				ParentRoot:           nil,
 				StateRoot:            nil,
-				Body:                 &core.PoolBlockBody{
+				Body:                 &core.BlockBody{
 					Attestations:         generateAttestations(
 						state,
 						thresholdSig,
@@ -161,7 +161,7 @@ func TestAttestationProcessing(t *testing.T) {
 				Proposer:             0,
 				ParentRoot:           nil,
 				StateRoot:            nil,
-				Body:                 &core.PoolBlockBody{
+				Body:                 &core.BlockBody{
 					Attestations:         generateAttestations(
 						state,
 						thresholdSig,

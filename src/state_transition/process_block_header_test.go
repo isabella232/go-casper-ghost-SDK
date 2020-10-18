@@ -24,7 +24,7 @@ func TestProcessBlockHeader(t *testing.T) {
 			block: &core.Block{
 				Proposer:        13,
 				Slot:            2,
-				Body: &core.PoolBlockBody{
+				Body: &core.BlockBody{
 					RandaoReveal:         toByte("97c4116516e77c522344aa3c3c223db0c14bad05aa005be63aadd19341e0cc6d"),
 				},
 				ParentRoot: toByte("71dcfc4567f947c7c396f293a615b3e46554a83595703399107d1b87d6b6ae3c"),
@@ -37,7 +37,7 @@ func TestProcessBlockHeader(t *testing.T) {
 			block: &core.Block{
 				Proposer:        13,
 				Slot:            2,
-				Body: &core.PoolBlockBody{
+				Body: &core.BlockBody{
 					RandaoReveal:         toByte("97c4116516e77c522344aa3c3c223db0c14bad05aa005be63aadd19341e0cc6d"),
 				},
 				ParentRoot: toByte("71dcfc4567f947c7c396f293a615b3e46554a83595703399107d1b87d6b6ae3c"),
@@ -50,7 +50,7 @@ func TestProcessBlockHeader(t *testing.T) {
 			block: &core.Block{
 				Proposer:        2,
 				Slot:            2,
-				Body: &core.PoolBlockBody{
+				Body: &core.BlockBody{
 					RandaoReveal:         toByte("97c4116516e77c522344aa3c3c223db0c14bad05aa005be63aadd19341e0cc6d"),
 				},
 				ParentRoot: toByte("332863d85bdafc9e5ccaeec92d12f00452bd9e3d71b80af4a0cab9df35c5e56f"),
@@ -63,7 +63,7 @@ func TestProcessBlockHeader(t *testing.T) {
 			block: &core.Block{
 				Proposer:        4550000000,
 				Slot:            2,
-				Body: &core.PoolBlockBody{
+				Body: &core.BlockBody{
 					RandaoReveal:         toByte("97c4116516e77c522344aa3c3c223db0c14bad05aa005be63aadd19341e0cc6d"),
 				},
 				ParentRoot: toByte("332863d85bdafc9e5ccaeec92d12f00452bd9e3d71b80af4a0cab9df35c5e56f"),
@@ -76,7 +76,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		//	block: &core.Block{
 		//		Proposer:        13,
 		//		Slot:            2,
-		//		Body: &core.PoolBlockBody{
+		//		Body: &core.BlockBody{
 		//			RandaoReveal:         toByte("97c4116516e77c522344aa3c3c223db0c14bad05aa005be63aadd19341e0cc6d"),
 		//		},
 		//		ParentRoot: toByte("332863d85bdafc9e5ccaeec92d12f00452bd9e3d71b80af4a0cab9df35c5e56f"),
@@ -90,7 +90,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		//	block: &core.Block{
 		//		Proposer:        13,
 		//		Slot:            2,
-		//		Body: &core.PoolBlockBody{
+		//		Body: &core.BlockBody{
 		//			RandaoReveal:         toByte("97c4116516e77c522344aa3c3c223db0c14bad05aa005be63aadd19341e0cc6"),
 		//		},
 		//		ParentRoot: toByte("332863d85bdafc9e5ccaeec92d12f00452bd9e3d71b80af4a0cab9df35c5e56f"),
@@ -103,7 +103,7 @@ func TestProcessBlockHeader(t *testing.T) {
 		//	block: &core.Block{
 		//		Proposer:        13,
 		//		Slot:            2,
-		//		Body: &core.PoolBlockBody{
+		//		Body: &core.BlockBody{
 		//			RandaoReveal:         toByte("97c4116516e77c522344aa3c3c223db0c14bad05aa005be63aadd19341e0cc6ddd"),
 		//		},
 		//		ParentRoot: toByte("332863d85bdafc9e5ccaeec92d12f00452bd9e3d71b80af4a0cab9df35c5e56f"),
@@ -116,7 +116,7 @@ func TestProcessBlockHeader(t *testing.T) {
 			block: &core.Block{
 				Proposer:        13,
 				Slot:            2,
-				Body: &core.PoolBlockBody{
+				Body: &core.BlockBody{
 					RandaoReveal:         toByte("97c4116516e77c522344aa3c3c223db0c14bad05aa005be63aadd19341e0cc6d"),
 				},
 				ParentRoot: toByte("75141b2e032f1b045ab9c7998dfd7238044e40eed0b2c526c33340643e871e42"),

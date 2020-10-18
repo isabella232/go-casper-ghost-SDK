@@ -52,7 +52,7 @@ func TestBlockApplyConsistency(t *testing.T) {
 		Proposer:             13,
 		ParentRoot:           toByte("71dcfc4567f947c7c396f293a615b3e46554a83595703399107d1b87d6b6ae3c"),
 		StateRoot:            nil,
-		Body:                 &core.PoolBlockBody{
+		Body:                 &core.BlockBody{
 			RandaoReveal:          toByte("b99d58464b006350d5348891225744c3e0c683598e27a2bc8088db6d068580a5aa53c63a55894803f0b0e189870d85d204ba1caf80ef102a012d04784e3ec1726adb234a01400b4e471715d13b43f6b336c8638be7f8ab4fb050d118161e9a36"),
 			NewPoolReq:      nil,
 			Attestations:         generateAttestations(

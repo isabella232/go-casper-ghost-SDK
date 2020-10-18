@@ -3,8 +3,9 @@ package state;
 
 option go_package = ".;core";
 
-import "src/core/actions.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "src/core/block.proto";
+import "src/core/attestation.proto";
 
 message State {
     // versioning
@@ -57,160 +58,6 @@ message Validator {
     bytes WithdrawalCredentials = 11;
 }
 
-message Pool {
-    uint64 Id = 1;
-    bool Active = 2;
-    bytes PubKey = 3;
-    repeated uint64 SortedCommittee = 4;
-}
-
-message PoolBlockBody {
-    // The validators RANDAO reveal 96 byte value.
-    bytes randao_reveal = 1 [(gogoproto.moretags) = "ssz-size:\"96\""];
-
-    ETH1Data Eth1Data = 2;
-
-    // 32 byte field of arbitrary data. This field may contain any data and
-    // is not used for anything other than a fun message.
-    bytes graffiti = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-
-    // At most MAX_PROPOSER_SLASHINGS.
-    repeated ProposerSlashing proposer_slashings = 4 [(gogoproto.moretags) = "ssz-max:\"16\""];
-
-    // At most MAX_ATTESTER_SLASHINGS.
-    repeated AttesterSlashing attester_slashings = 5 [(gogoproto.moretags) = "ssz-max:\"2\""];
-
-    // At most MAX_ATTESTATIONS.
-    repeated Attestation attestations = 6 [(gogoproto.moretags) = "ssz-max:\"128\""];
-
-    // At most MAX_DEPOSITS.
-    repeated Deposit deposits = 7 [(gogoproto.moretags) = "ssz-max:\"16\""];
-
-    // At most MAX_VOLUNTARY_EXITS.
-    repeated SignedVoluntaryExit voluntary_exits = 8 [(gogoproto.moretags) = "ssz-max:\"16\""];
-
-    repeated CreateNewPoolRequest NewPoolReq = 9;
-
-
-}
-
-message Deposit {
-    message DepositData {
-        // 48 byte BLS public key of the validator.
-        bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
-
-        // A 32 byte hash of the withdrawal address public key.
-        bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-
-        // Deposit amount in gwei.
-        uint64 amount = 3;
-
-        // 96 byte signature from the validators public key.
-        bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
-    }
-    repeated bytes Proof = 1;
-    DepositData Data = 2;
-}
-
-message DepositMessage {
-    // 48 byte BLS public key of the validator.
-    bytes public_key = 1 [(gogoproto.moretags) = "ssz-size:\"48\" spec-name:\"pubkey\""];
-
-    // A 32 byte hash of the withdrawal address public key.
-    bytes withdrawal_credentials = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
-
-    // Deposit amount in gwei.
-    uint64 amount = 3;
-}
-
-message DepositData {
-
-}
-
-message Block {
-    uint64 Slot = 1;
-    uint64 Proposer = 2;
-    bytes ParentRoot = 3;
-    bytes StateRoot = 4;
-    PoolBlockBody Body = 5;
-}
-
-message SignedBlock {
-    Block Block = 1;
-    bytes Signature = 2;
-}
-
-message BlockHeader {
-    uint64 Slot = 1;
-    uint64 ProposerIndex = 2;
-    bytes ParentRoot = 3;
-    bytes StateRoot = 4;
-    bytes BodyRoot = 5;
-}
-
-message SignedBlockHeader {
-    // The unsigned beacon block header itself.
-    BlockHeader header = 1;
-
-    // 96 byte BLS signature from the validator that produced this block header.
-    bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
-}
-
-message PendingAttestation {
-    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-    AttestationData data = 2;
-    uint64 InclusionDelay = 3;
-    uint64 ProposerIndex = 4;
-}
-
-message Attestation {
-    // A bitfield representation of validator indices that have voted exactly
-    // the same vote and have been aggregated into this attestation.
-    bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
-    AttestationData data = 2;
-    bytes signature = 3; // 96 byte BLS aggregate signature.
-}
-
-message AttestationData {
-    // Slot of the attestation attesting for.
-    uint64 slot = 1;
-    // The committee index that submitted this attestation.
-    uint64 committee_index = 2;
-    // 32 byte root of the LMD GHOST block vote.
-    bytes beacon_block_root = 3;
-    // The most recent justified checkpoint in the beacon state
-    Checkpoint source = 4;
-    // The checkpoint attempting to be justified for the current epoch and its epoch boundary block
-    Checkpoint target = 5;
-}
-
-message IndexedAttestation {
-    repeated uint64 attesting_indices = 1 [(gogoproto.moretags) = "ssz-max:\"2048\""];
-
-    AttestationData data = 2;
-
-    // 96 bytes aggregate signature.
-    bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""];
-}
-
-
-message BeaconDuty {
-    int32 Type = 1; // 0 - attestation, 1 - proposal, 2 - aggregation
-    uint64 Committee = 2;
-    uint64 Slot = 3;
-    bool Finalized = 4;
-    bytes Participation = 5 [(gogoproto.moretags) = "ssz-max:\"3\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"]; // 24 bit of the executors (by order) which executed this duty
-}
-
-message Checkpoint {
-    // A checkpoint is every epoch's first slot. The goal of Casper FFG
-    // is to link the check points together for justification and finalization.
-    // Epoch the checkpoint references.
-    uint64 epoch = 1;
-    // Block root of the checkpoint references.
-    bytes root = 2;
-}
-
 message SlotAndBytes {
     uint64 Slot = 1;
     bytes Bytes = 2;
@@ -235,53 +82,7 @@ message ForkData {
     bytes GenesisValidatorRoot = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
-message ETH1Data {
-    bytes DepositRoot = 1;
-    uint64 DepositCount = 2;
-    bytes BlockHash = 3;
-}
-
 message HistoricalBatch {
     repeated bytes BlockRoots = 1;
     repeated bytes StateRoots = 2;
-}
-
-// Proposer slashings are proofs that a slashable offense has been committed by
-// proposing two conflicting blocks from the same validator.
-message ProposerSlashing {
-    // First conflicting signed block header.
-    SignedBlockHeader header_1 = 2;
-
-    // Second conflicting signed block header.
-    SignedBlockHeader header_2 = 3;
-}
-
-// Attestor slashings are proofs that a slashable offense has been committed by
-// attestating to two conflicting pieces of information by the same validator.
-message AttesterSlashing {
-    // First conflicting attestation.
-    IndexedAttestation attestation_1 = 1;
-
-    // Second conflicting attestation.
-    IndexedAttestation attestation_2 = 2;
-}
-
-// A message that represents a validator signaling that they want to voluntarily
-// withdraw from the active validator set. The message does not contain a
-// validator signature.
-message VoluntaryExit {
-    // The epoch on when exit request becomes valid.
-    uint64 epoch = 1;
-
-    // Index of the exiting validator.
-    uint64 validator_index = 2;
-}
-
-// The signed version of voluntary exit.
-message SignedVoluntaryExit {
-    // The unsigned voluntary exit itself.
-    VoluntaryExit exit = 1;
-
-    // Validator's 96 byte signature
-    bytes signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
