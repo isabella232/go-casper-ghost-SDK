@@ -100,7 +100,7 @@ func GetEligibleBpIndices(state *core.State) []uint64 {
 	ret := []uint64{}
 	prevEpoch := GetPreviousEpoch(state)
 	for _, bp := range state.Validators {
-		if IsActiveBP(bp, prevEpoch) || (bp.Slashed && prevEpoch + 1 < bp.WithdrawableEpoch) {
+		if IsActiveValidator(bp, prevEpoch) || (bp.Slashed && prevEpoch + 1 < bp.WithdrawableEpoch) {
 			ret = append(ret, bp.Id)
 		}
 	}

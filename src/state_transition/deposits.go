@@ -11,6 +11,15 @@ import (
 )
 
 func ProcessDeposits(state *core.State, deposits []*core.Deposit) error {
+	if deposits == nil {
+		return nil // no deposits
+	}
+
+	// Verify that outstanding deposits are processed up to the maximum number of deposits
+	if uint64(len(deposits)) != mathutil.Min(params.ChainConfig.MaxDeposits, state.Eth1Data.DepositCount - state.Eth1DepositIndex) {
+		return fmt.Errorf("number of deposits in body invalid")
+	}
+
 	for _, deposit := range deposits {
 		if err := processDeposit(state, deposit); err != nil {
 			return err

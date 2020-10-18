@@ -18,20 +18,20 @@ func CopyState(state *core.State) *core.State {
 
 	ret.BlockRoots = make([][]byte, len(state.BlockRoots))
 	for i, r := range state.BlockRoots {
-		ret.BlockRoots[i] = make([]byte, 0)
-		deepcopier.Copy(r).To(ret.BlockRoots[i])
+		ret.BlockRoots[i] = make([]byte, len(state.BlockRoots[i]))
+		copy(ret.BlockRoots[i], r)
 	}
 
 	ret.StateRoots = make([][]byte, len(state.StateRoots))
 	for i, r := range state.StateRoots {
-		ret.StateRoots[i] = make([]byte, 0)
-		deepcopier.Copy(r).To(ret.StateRoots[i])
+		ret.StateRoots[i] = make([]byte, len(state.StateRoots[i]))
+		copy(ret.StateRoots[i], r)
 	}
 
 	ret.RandaoMix = make([][]byte, len(state.RandaoMix))
 	for i, r := range state.RandaoMix {
-		ret.RandaoMix[i] = make([]byte, 0)
-		deepcopier.Copy(r).To(ret.RandaoMix[i])
+		ret.RandaoMix[i] = make([]byte, len(state.RandaoMix[i]))
+		copy(ret.RandaoMix[i], r)
 	}
 
 	ret.Validators = make([]*core.Validator, len(state.Validators))
@@ -73,6 +73,14 @@ func CopyState(state *core.State) *core.State {
 		deepcopier.Copy(state.LatestBlockHeader).To(ret.LatestBlockHeader)
 	}
 
+	if state.Fork != nil {
+		ret.Fork = &core.Fork{}
+		deepcopier.Copy(state.Fork).To(ret.Fork)
+	}
+
+	ret.GenesisValidatorsRoot = make([]byte, len(state.GenesisValidatorsRoot))
+	copy(ret.GenesisValidatorsRoot, state.GenesisValidatorsRoot)
+
 	return ret
 }
 
@@ -98,7 +106,7 @@ func IsValidGenesisState(state *core.State) bool {
 	if state.GenesisTime < params.ChainConfig.MinGenesisTime {
 		return false
 	}
-	if uint64(len(GetActiveValidators(state, params.ChainConfig.GenesisEpoch))) < params.ChainConfig.MinGenesisActiveBPCount {
+	if uint64(len(GetActiveValidators(state, params.ChainConfig.GenesisEpoch))) < params.ChainConfig.MinGenesisActiveValidatorCount {
 		return false
 	}
 	return true

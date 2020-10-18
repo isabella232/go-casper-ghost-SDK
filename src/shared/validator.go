@@ -17,7 +17,7 @@ import (
 		"""
 		return validator.activation_epoch <= epoch < validator.exit_epoch
  */
-func IsActiveBP(bp *core.Validator, epoch uint64) bool {
+func IsActiveValidator(bp *core.Validator, epoch uint64) bool {
 	return bp.ActivationEpoch <= epoch && epoch < bp.ExitEpoch
 }
 
@@ -84,11 +84,11 @@ func ComputeProposerIndex(state *core.State, indices []uint64, seed []byte) (uin
 	if len(indices) == 0 {
 		return 0, fmt.Errorf("couldn't compute proposer, indices list empty")
 	}
-	maxRandomByte := uint64(2^8-1)
+	maxRandomByte := uint64(1<<8-1)
 	i := uint64(0)
 	total := uint64(len(indices))
 	for {
-		idx, err := computeShuffledIndex(i % total, total, bytesutil.ToBytes32(seed), true,10) // TODO - shuffle round via config
+		idx, err := computeShuffledIndex(i % total, total, bytesutil.ToBytes32(seed), true,params.ChainConfig.ShuffleRoundCount) // TODO - shuffle round via config
 		if err != nil {
 			return 0, err
 		}
@@ -129,9 +129,9 @@ def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[V
  */
 func GetActiveValidators(state *core.State, epoch uint64) []uint64 {
 	var activeBps []uint64
-	for _, bp := range state.Validators {
-		if IsActiveBP(bp, epoch) {
-			activeBps = append(activeBps, bp.GetId())
+	for _, val := range state.Validators {
+		if IsActiveValidator(val, epoch) {
+			activeBps = append(activeBps, val.GetId())
 		}
 	}
 	return activeBps
@@ -170,8 +170,8 @@ func GetBlockProposerIndex(state *core.State) (uint64, error) {
 	SeedWithSlot := append(seed[:], bytesutil.Bytes8(state.CurrentSlot)...)
 	hash := hashutil.Hash(SeedWithSlot)
 
-	bps := GetActiveValidators(state, epoch)
-	return ComputeProposerIndex(state, bps, hash[:])
+	validators := GetActiveValidators(state, epoch)
+	return ComputeProposerIndex(state, validators, hash[:])
 }
 
 /**

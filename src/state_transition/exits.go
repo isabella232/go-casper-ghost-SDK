@@ -43,7 +43,7 @@ func processExit(state *core.State, exit *core.SignedVoluntaryExit) error {
 	}
 
 	// Verify the validator is active
-	if !shared.IsActiveBP(bp, shared.GetCurrentEpoch(state)) {
+	if !shared.IsActiveValidator(bp, shared.GetCurrentEpoch(state)) {
 		return fmt.Errorf("process exit: BP %d not active", voluntaryExit.ValidatorIndex)
 	}
 	// Verify exit has not been initiated

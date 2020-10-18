@@ -14,7 +14,9 @@ func TestSanity(t *testing.T) {
 			0,
 		)
 	require.NoError(t, err)
-	ctx.PopulateGenesisValidator(10)
+
+	ctx.PopulateGenesisValidator(params.ChainConfig.MinGenesisActiveValidatorCount)
+	ctx.ProgressSlotsAndEpochs(5)
 
 	fmt.Printf("")
 }

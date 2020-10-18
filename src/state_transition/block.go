@@ -8,7 +8,6 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 func (st *StateTransition) ProcessBlock(state *core.State, signedBlock *core.SignedBlock) error {
@@ -21,7 +20,7 @@ func (st *StateTransition) ProcessBlock(state *core.State, signedBlock *core.Sig
 	if err := processEth1Data(state, signedBlock.Block.Body); err != nil {
 		return err
 	}
-	if err := processOperations(state, st, signedBlock.Block.Body); err != nil {
+	if err := processOperations(state, signedBlock.Block.Body); err != nil {
 		return err
 	}
 	return nil
@@ -34,10 +33,11 @@ func (st *StateTransition) processBlockForStateRoot(state *core.State, signedBlo
 	if err := processRANDAONoVerify(state, signedBlock.Block); err != nil {
 		return err
 	}
-	for _, att := range signedBlock.Block.Body.Attestations {
-		if err := processAttestationNoSigVerify(state, att); err != nil {
-			return err
-		}
+	if err := processEth1Data(state, signedBlock.Block.Body); err != nil {
+		return err
+	}
+	if err := processOperationsNoVerify(state, signedBlock.Block.Body); err != nil {
+		return err
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedBlock
 	}
 	proposerId :=  block.GetProposer()
 	if expectedProposer != proposerId {
-		return fmt.Errorf("block expectedProposer is worng, expected %d but received %d", expectedProposer, proposerId)
+		return fmt.Errorf("process block: block expectedProposer is worng, expected %d but received %d", expectedProposer, proposerId)
 	}
 
 	// parent
@@ -134,7 +134,7 @@ func verifyBlockSig(state *core.State, signedBlock *core.SignedBlock) error {
 		return err
 	}
 	if err := shared.VerifyBlockSigningRoot(block, proposer.GetPubKey(), signedBlock.Signature, domain); err != nil { // TODO - domain not hard coded
-		return err
+		return fmt.Errorf("process block: %s", err.Error())
 	}
 	return nil
 }
@@ -179,12 +179,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
     for_ops(body.deposits, process_deposit)
     for_ops(body.voluntary_exits, process_voluntary_exit)
  */
-func processOperations(state *core.State, st *StateTransition, body *core.BlockBody) error {
-	// Verify that outstanding deposits are processed up to the maximum number of deposits
-	if uint64(len(body.Deposits)) != mathutil.Min(params.ChainConfig.MaxDeposits, state.Eth1Data.DepositCount - state.Eth1DepositIndex) {
-		return fmt.Errorf("number of deposits in body invalid")
-	}
-
+func processOperations(state *core.State, body *core.BlockBody) error {
 	if err := ProcessProposerSlashings(state, body.ProposerSlashings); err != nil {
 		return err
 	}
@@ -201,6 +196,27 @@ func processOperations(state *core.State, st *StateTransition, body *core.BlockB
 		return err
 	}
 
+	return nil
+}
+
+func processOperationsNoVerify(state *core.State, body *core.BlockBody) error {
+	if err := ProcessProposerSlashings(state, body.ProposerSlashings); err != nil {
+		return err
+	}
+	if err := ProcessAttesterSlashings(state, body.AttesterSlashings); err != nil {
+		return err
+	}
+	for _, att := range body.Attestations {
+		if err := processAttestationNoSigVerify(state, att); err != nil {
+			return err
+		}
+	}
+	if err := ProcessDeposits(state, body.Deposits); err != nil {
+		return err
+	}
+	if err := ProcessExits(state, body.VoluntaryExits); err != nil {
+		return err
+	}
 	return nil
 }
 

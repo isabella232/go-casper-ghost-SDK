@@ -10,10 +10,8 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
-	"github.com/stretchr/testify/require"
 	"github.com/ulule/deepcopier"
 	"log"
-	"testing"
 )
 
 func toByte(str string) []byte {
@@ -143,7 +141,7 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 		depositMessage := &core.DepositMessage{
 			PublicKey:             sk.GetPublicKey().Serialize(),
 			WithdrawalCredentials: []byte("test_withdrawal_cred"),
-			Amount:                32 * 10^18,
+			Amount:                32 * 1e9, // gwei
 		}
 		root, err := ssz.HashTreeRoot(depositMessage)
 		if err != nil {
@@ -188,7 +186,9 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 	// process
 	for _, deposit := range deposits {
 		// Add validator and balance entries
-		c.State.Validators = append(c.State.Validators, GetBPFromDeposit(c.State, deposit))
+		v := GetBPFromDeposit(c.State, deposit)
+		v.ActivationEpoch = 0
+		c.State.Validators = append(c.State.Validators, v)
 	}
 
 	// update genesis root
@@ -201,10 +201,96 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 	return c
 }
 
-func (c *StateTestContext) ProgressSlots(endSlot uint64) {
+// will generate and save blocks from slot 0 until maxBlocks
+func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int) {
+	var previousBlockHeader *core.BlockHeader
+	previousBlockHeader, err := initBlockHeader()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for i := 0 ; i < maxBlocks ; i++ {
+		fmt.Printf("progressing block %d\n", i)
+		// get proposer
+		stateCopy := shared.CopyState(c.State)
+		// we increment it before we gt proposer as this is what happens in real block processing
+		// in slot > 0 the process slots is called before process block which increments slot by 1
+		if i != 0 {
+			stateCopy.CurrentSlot ++
+		}
+		pID, err := shared.GetBlockProposerIndex(stateCopy)
+		if err != nil {
+			log.Fatal(err)
+		}
+		sk := []byte(fmt.Sprintf("%d", pID))
 
+		// parent
+		// replicates what the next process slot does
+		if i != 0 {
+			stateRoot,err := ssz.HashTreeRoot(c.State)
+			if err != nil {
+				log.Fatal(err)
+			}
+			previousBlockHeader.StateRoot =  stateRoot[:]
+		}
+		parentRoot,err := ssz.HashTreeRoot(previousBlockHeader)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// randao
+		randaoReveal, err := signRandao(c.State, sk)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		block := &core.Block{
+			Slot:                 uint64(i),
+			Proposer:             pID,
+			ParentRoot:           parentRoot[:],
+			StateRoot:            params.ChainConfig.ZeroHash,
+			Body:                 &core.BlockBody{
+				RandaoReveal:         randaoReveal.Serialize(),
+				Attestations:         []*core.Attestation{},
+			},
+		}
+
+		// process
+		st := NewStateTransition()
+
+		// compute state root
+		root, err := st.ComputeStateRoot(c.State, &core.SignedBlock{
+			Block:                block,
+			Signature:            []byte{},
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		block.StateRoot = root[:]
+
+		// sign
+		blockDomain, err := shared.GetDomain(c.State, params.ChainConfig.DomainBeaconProposer, shared.GetCurrentEpoch(c.State))
+		if err != nil {
+			log.Fatal(err)
+		}
+		sig, err := shared.SignBlock(block, sk, blockDomain) // TODO - dynamic domain
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// execute
+		c.State, err = st.ExecuteStateTransition(c.State, &core.SignedBlock{
+			Block:                block,
+			Signature:            sig.Serialize(),
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// copy to previousBlockRoot
+		previousBlockHeader = &core.BlockHeader{}
+		deepcopier.Copy(c.State.LatestBlockHeader).To(previousBlockHeader)
+	}
 }
-
 
 func generateAttestations(
 	state *core.State,
@@ -267,70 +353,70 @@ func generateAttestations(
 	}
 }
 
-func generateTestState(t *testing.T, headSlot int) *core.State {
-	require.NoError(t, bls.Init(bls.BLS12_381))
-	require.NoError(t, bls.SetETHmode(bls.EthModeDraft07))
-
-	// block producers
-	bps := make([]*core.Validator, 124)
-	for i := 0 ; i < len(bps) ; i++ {
-		sk := &bls.SecretKey{}
-		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
-
-		bps[i] = &core.Validator {
-			Id:      uint64(i),
-			EffectiveBalance:   32,
-			Balance : 32,
-			Slashed: false,
-			Active:  true,
-			PubKey:  sk.GetPublicKey().Serialize(),
-		}
-	}
-
-	// vaults (pool)
-	//for i := 0 ; i < len(pools) ; i++ {
-	//	executors := make([]uint64, params.ChainConfig.VaultSize)
-	//	for j := 0 ; j < int(params.ChainConfig.VaultSize) ; j++ {
-	//		executors[j] = bps[i*int(params.ChainConfig.VaultSize) + j].GetId()
-	//	} // no need to sort as they are already
-	//
-	//	sk := &bls.SecretKey{}
-	//	sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
-	//
-	//	pools[i] = &core.Pool{
-	//		Id:              uint64(i),
-	//		SortedCommittee: executors,
-	//		PubKey:          sk.GetPublicKey().Serialize(),
-	//		Active:true,
-	//	}
-	//}
-	ret := &core.State {
-		CurrentSlot: 0,
-		Validators:  bps,
-		RandaoMix:          	   make([][]byte, params.ChainConfig.EpochsPerHistoricalVector),
-		BlockRoots:                make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot),
-		StateRoots:                make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot),
-		PreviousEpochAttestations: []*core.PendingAttestation{},
-		CurrentEpochAttestations:  []*core.PendingAttestation{},
-		JustificationBits:         []byte{0},
-		PreviousJustifiedCheckpoint: &core.Checkpoint{
-			Epoch:                0,
-			Root:                 params.ChainConfig.ZeroHash, // TODO is it zero hash?
-		},
-		CurrentJustifiedCheckpoint: &core.Checkpoint{
-			Epoch:                0,
-			Root:                 params.ChainConfig.ZeroHash, // TODO is it zero hash?
-		},
-	}
-
-	ret, err := generateAndApplyBlocks(ret, headSlot)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return nil
-	}
-
-	return ret
-}
+//func generateTestState(t *testing.T, headSlot int) *core.State {
+//	require.NoError(t, bls.Init(bls.BLS12_381))
+//	require.NoError(t, bls.SetETHmode(bls.EthModeDraft07))
+//
+//	// block producers
+//	bps := make([]*core.Validator, 124)
+//	for i := 0 ; i < len(bps) ; i++ {
+//		sk := &bls.SecretKey{}
+//		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
+//
+//		bps[i] = &core.Validator {
+//			Id:      uint64(i),
+//			EffectiveBalance:   32,
+//			Balance : 32,
+//			Slashed: false,
+//			Active:  true,
+//			PubKey:  sk.GetPublicKey().Serialize(),
+//		}
+//	}
+//
+//	// vaults (pool)
+//	//for i := 0 ; i < len(pools) ; i++ {
+//	//	executors := make([]uint64, params.ChainConfig.VaultSize)
+//	//	for j := 0 ; j < int(params.ChainConfig.VaultSize) ; j++ {
+//	//		executors[j] = bps[i*int(params.ChainConfig.VaultSize) + j].GetId()
+//	//	} // no need to sort as they are already
+//	//
+//	//	sk := &bls.SecretKey{}
+//	//	sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
+//	//
+//	//	pools[i] = &core.Pool{
+//	//		Id:              uint64(i),
+//	//		SortedCommittee: executors,
+//	//		PubKey:          sk.GetPublicKey().Serialize(),
+//	//		Active:true,
+//	//	}
+//	//}
+//	ret := &core.State {
+//		CurrentSlot: 0,
+//		Validators:  bps,
+//		RandaoMix:          	   make([][]byte, params.ChainConfig.EpochsPerHistoricalVector),
+//		BlockRoots:                make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot),
+//		StateRoots:                make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot),
+//		PreviousEpochAttestations: []*core.PendingAttestation{},
+//		CurrentEpochAttestations:  []*core.PendingAttestation{},
+//		JustificationBits:         []byte{0},
+//		PreviousJustifiedCheckpoint: &core.Checkpoint{
+//			Epoch:                0,
+//			Root:                 params.ChainConfig.ZeroHash, // TODO is it zero hash?
+//		},
+//		CurrentJustifiedCheckpoint: &core.Checkpoint{
+//			Epoch:                0,
+//			Root:                 params.ChainConfig.ZeroHash, // TODO is it zero hash?
+//		},
+//	}
+//
+//	ret, err := generateAndApplyBlocks(ret, headSlot)
+//	if err != nil {
+//		fmt.Printf("%s\n", err.Error())
+//		return nil
+//	}
+//
+//	return ret
+//}
 
 // will populate the prev and current pending attestations for processing
 func populateJustificationAndFinalization(
@@ -360,7 +446,7 @@ func populateJustificationAndFinalization(
 			}
 			targetParticipation := uint64(float64(len(committee)) * participationRate)
 
-			aggBits := make(bitfield.Bitlist, params.ChainConfig.MaxAttestationCommitteeSize)
+			aggBits := make(bitfield.Bitlist, params.ChainConfig.MaxValidatorsPerCommittee)
 			for i := uint64(0); i < targetParticipation; i ++ {
 				aggBits.SetBitAt(i, true)
 			}
@@ -380,88 +466,6 @@ func populateJustificationAndFinalization(
 	setPendingAttArray(pendingAttArray)
 
 	return nil
-}
-
-// will generate and save blocks from slot 0 until maxBlocks
-func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, error) {
-	var previousBlockHeader *core.BlockHeader
-	for i := 0 ; i < maxBlocks ; i++ {
-		// get proposer
-		pID, err := shared.GetBlockProposerIndex(state)
-		if err != nil {
-			return nil, err
-		}
-		sk := []byte(fmt.Sprintf("%d", pID))
-
-		// state root
-		stateRoot,err := ssz.HashTreeRoot(state)
-		if err != nil {
-			return nil, err
-		}
-
-		// parent
-		if previousBlockHeader != nil {
-			previousBlockHeader.StateRoot =  stateRoot[:]
-		}
-		parentRoot,err := ssz.HashTreeRoot(previousBlockHeader)
-		if err != nil {
-			return nil, err
-		}
-
-		// randao
-		randaoReveal, err := signRandao(state, sk)
-		if err != nil {
-			return nil, err
-		}
-
-		block := &core.Block{
-			Slot:                 uint64(i),
-			Proposer:             pID,
-			ParentRoot:           parentRoot[:],
-			StateRoot:            params.ChainConfig.ZeroHash,
-			Body:                 &core.BlockBody{
-				RandaoReveal:         randaoReveal.Serialize(),
-				Attestations:         []*core.Attestation{},
-			},
-		}
-
-		// process
-		st := NewStateTransition()
-
-		// compute state root
-		root, err := st.ComputeStateRoot(state, &core.SignedBlock{
-			Block:                block,
-			Signature:            []byte{},
-		})
-		if err != nil {
-			return nil, err
-		}
-		block.StateRoot = root[:]
-
-		// sign
-		blockDomain, err := shared.GetDomain(state, params.ChainConfig.DomainBeaconProposer, 0)
-		if err != nil {
-			return nil, err
-		}
-		sig, err := shared.SignBlock(block, sk, blockDomain) // TODO - dynamic domain
-		if err != nil {
-			return nil, err
-		}
-
-		// execute
-		state, err = st.ExecuteStateTransition(state, &core.SignedBlock{
-			Block:                block,
-			Signature:            sig.Serialize(),
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		// copy to previousBlockRoot
-		previousBlockHeader = &core.BlockHeader{}
-		deepcopier.Copy(state.LatestBlockHeader).To(previousBlockHeader)
-	}
-	return state, nil
 }
 
 func signRandao(state *core.State, sk []byte) (*bls.Sign, error) {

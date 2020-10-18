@@ -7,7 +7,6 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 	"github.com/prysmaticlabs/go-ssz"
-	"log"
 )
 
 type IStateTransition interface {
@@ -78,7 +77,6 @@ type StateTransition struct {}
 func NewStateTransition() *StateTransition { return &StateTransition{} }
 
 func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock *core.SignedBlock) (newState *core.State, err error) {
-	log.Printf("processing block at slot %d\n", signedBlock.Block.Slot)
 	newState = shared.CopyState(state)
 
 	if err := st.ProcessSlots(newState, signedBlock.Block.Slot); err != nil {
@@ -94,7 +92,7 @@ func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock 
 		return nil, err
 	}
 	if !bytes.Equal(signedBlock.Block.StateRoot, postStateRoot[:]) {
-		return nil, fmt.Errorf("new block state root is wrong, expected %s", hex.EncodeToString(postStateRoot[:]))
+		return nil, fmt.Errorf("state transition: new block state root is wrong, expected %s", hex.EncodeToString(postStateRoot[:]))
 	}
 
 	return newState, nil

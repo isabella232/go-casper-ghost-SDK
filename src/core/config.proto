@@ -19,18 +19,19 @@ message ChainConfig {
   uint64 ShardCommitteePeriod = 108;
 
   // Misc
-  uint64 MinAttestationCommitteeSize = 200;
-  uint64 MaxAttestationCommitteeSize = 201;
-  uint64 MaxCommitteesPerSlot = 202;
+  uint64 MaxCommitteesPerSlot = 200;
+  uint64 TargetCommitteeSize = 201;
+  uint64 MaxValidatorsPerCommittee = 202;
   uint64 ChurnLimitQuotient = 203;
   uint64 VaultSize = 204;
   uint64 MinPerEpochChurnLimit = 205;
   uint64 MinGenesisTime = 206;
-  uint64 MinGenesisActiveBPCount = 207;
+  uint64 MinGenesisActiveValidatorCount = 207;
   uint64 ProportionalSlashingMultiplier = 208;
   uint64 HysteresisQuotient = 209;
   uint64 HysteresisDownwardMultiplier = 210;
   uint64 HysteresisUpwardMultiplier = 211;
+  uint64 ShuffleRoundCount = 212;
 
   // constants
   uint64 FarFutureEpoch = 300;

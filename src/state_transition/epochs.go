@@ -199,7 +199,7 @@ func ProcessRegistryUpdates(state *core.State) {
 			bp.ActivationEligibilityEpoch = shared.GetCurrentEpoch(state) + 1
 		}
 
-		if shared.IsActiveBP(bp, shared.GetCurrentEpoch(state)) && bp.EffectiveBalance <= params.ChainConfig.EjectionBalance {
+		if shared.IsActiveValidator(bp, shared.GetCurrentEpoch(state)) && bp.EffectiveBalance <= params.ChainConfig.EjectionBalance {
 			shared.InitiateValidatorExit(state, bp.Id)
 		}
 	}

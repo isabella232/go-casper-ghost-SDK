@@ -111,7 +111,7 @@ def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
 func GetCommitteeCountPerSlot(state *core.State, slot uint64) uint64 {
 	epoch := ComputeEpochAtSlot(slot)
 	bps := GetActiveValidators(state, epoch)
-	committeePerSlot := uint64(len(bps)) / params.ChainConfig.SlotsInEpoch / params.ChainConfig.MinAttestationCommitteeSize
+	committeePerSlot := uint64(len(bps)) / params.ChainConfig.SlotsInEpoch / params.ChainConfig.TargetCommitteeSize
 
 	if committeePerSlot > params.ChainConfig.MaxCommitteesPerSlot {
 		return params.ChainConfig.MaxCommitteesPerSlot

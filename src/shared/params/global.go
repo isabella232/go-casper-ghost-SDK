@@ -1,3 +1,3 @@
 package params
 
-var ChainConfig = testConfig()
+var ChainConfig = minimalTestingConfig()
