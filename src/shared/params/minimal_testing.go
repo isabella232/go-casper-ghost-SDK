@@ -18,6 +18,9 @@ func testConfig() *core.ChainConfig {
 	genesisSeed,_ := hex.DecodeString("sdddseedseedseedseedseedseedseed")
 
 	return &core.ChainConfig{
+		// initial values
+		GenesisForkVersion: Bytes4(0),
+
 		// Time
 		SlotsInEpoch:                32,
 		MinAttestationInclusionDelay: 1,
@@ -74,7 +77,6 @@ func testConfig() *core.ChainConfig {
 		DomainVoluntaryExit: Bytes4(4),
 		DomainSelectionProof:Bytes4(5),
 		DomainAggregateAndProof:Bytes4(6),
-		GenesisForkVersion: []byte{},
 
 		// Gwei values
 		MaxEffectiveBalance: 2^5 * 10^9, // 32 ETH

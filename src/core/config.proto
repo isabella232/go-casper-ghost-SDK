@@ -4,6 +4,9 @@ package state;
 option go_package = ".;core";
 
 message ChainConfig {
+  // initial values
+  bytes GenesisForkVersion = 1;
+
   // Time
   uint64 SlotsInEpoch = 100;
   uint64 MinAttestationInclusionDelay = 101;
@@ -59,7 +62,6 @@ message ChainConfig {
   bytes DomainVoluntaryExit = 604;
   bytes DomainSelectionProof = 605;
   bytes DomainAggregateAndProof = 606;
-  bytes GenesisForkVersion = 607;
 
 
   // Gwei values

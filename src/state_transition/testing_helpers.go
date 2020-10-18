@@ -19,35 +19,99 @@ func toByte(str string) []byte {
 	return ret
 }
 
+func defaultEth1Data() *core.ETH1Data {
+	return &core.ETH1Data{
+		DepositRoot:          nil,
+		DepositCount:         0,
+		BlockHash:            nil,
+	}
+}
+
+func initBlockHeader() (*core.BlockHeader, error) {
+	root, err := ssz.HashTreeRoot(&core.BlockBody{})
+	if err != nil {
+		return nil, err
+	}
+	return &core.BlockHeader{
+		Slot:                 0,
+		ProposerIndex:        0,
+		ParentRoot:           nil,
+		StateRoot:            nil,
+		BodyRoot:             root[:],
+	}, nil
+}
+
 type StateTestContext struct {
 	State *core.State
 }
 
-func NewStateTestContext(config *core.PoolsChainConfig) *StateTestContext {
+func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, genesisTime uint64) (*StateTestContext, error) {
+	if eth1Data == nil {
+		eth1Data = defaultEth1Data()
+	}
+
+	initBlockHeader, err := initBlockHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	randaoMixes := make([][]byte, params.ChainConfig.EpochsPerHistoricalVector)
+	for i := range randaoMixes {
+		randaoMixes[i] = eth1Data.BlockHash
+	}
+
+	blockRoots := make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot)
+	for i := range blockRoots {
+		blockRoots[i] = params.ChainConfig.ZeroHash
+	}
+
+	stateRoots := make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot)
+	for i := range stateRoots {
+		stateRoots[i] = params.ChainConfig.ZeroHash
+	}
+
+	genesisValdiatorRoot, err := ssz.HashTreeRoot([]*core.Validator{})
+	if err != nil {
+		return nil, err
+	}
+
 	return &StateTestContext{
 		State: &core.State{
-			GenesisTime:                 0,
+			GenesisTime:                 genesisTime,
 			CurrentSlot:                 0,
-			LatestBlockHeader:           nil,
-			Fork:                        nil,
-			BlockRoots:                  nil,
-			StateRoots:                  nil,
-			RandaoMix:                   nil,
-			HistoricalRoots:             nil,
-			GenesisValidatorsRoot:       nil,
-			PreviousEpochAttestations:   nil,
-			CurrentEpochAttestations:    nil,
-			JustificationBits:           nil,
-			PreviousJustifiedCheckpoint: nil,
-			CurrentJustifiedCheckpoint:  nil,
-			FinalizedCheckpoint:         nil,
-			Eth1Data:                    nil,
-			Eth1DataVotes:               nil,
+			LatestBlockHeader:           initBlockHeader,
+			Fork:                        &core.Fork{
+				PreviousVersion:      config.GenesisForkVersion,
+				CurrentVersion:       config.GenesisForkVersion,
+				Epoch:                config.GenesisEpoch,
+			},
+			BlockRoots:                  blockRoots,
+			StateRoots:                  stateRoots,
+			RandaoMix:                   randaoMixes,
+			HistoricalRoots:             [][]byte{},
+			GenesisValidatorsRoot:       genesisValdiatorRoot[:],
+			PreviousEpochAttestations:   []*core.PendingAttestation{},
+			CurrentEpochAttestations:    []*core.PendingAttestation{},
+			JustificationBits:           []byte{0},
+			PreviousJustifiedCheckpoint: &core.Checkpoint{
+				Epoch:                0,
+				Root:                 params.ChainConfig.ZeroHash,
+			},
+			CurrentJustifiedCheckpoint:  &core.Checkpoint{
+				Epoch:                0,
+				Root:                 params.ChainConfig.ZeroHash,
+			},
+			FinalizedCheckpoint:         &core.Checkpoint{
+				Epoch:                0,
+				Root:                 params.ChainConfig.ZeroHash,
+			},
+			Eth1Data:                    eth1Data,
+			Eth1DataVotes:               []*core.ETH1Data{},
 			Eth1DepositIndex:            0,
-			Validators:                  nil,
-			Slashings:                   nil,
+			Validators:                  []*core.Validator{},
+			Slashings:                   []uint64{},
 		},
-	}
+	}, nil
 }
 
 
