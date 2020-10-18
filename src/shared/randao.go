@@ -1,7 +1,6 @@
 package shared
 
 import (
-	"fmt"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
 )
@@ -14,27 +13,7 @@ def get_randao_mix(state: BeaconState, epoch: Epoch) -> Bytes32:
     return state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR]
  */
 func GetRandaoMix(state *core.State, epoch uint64) []byte {
-	return state.Randao[len(state.Randao) - 1].Bytes // TODO - GetRandaoMix make it as spec
-}
-
-func GetLatestRandaoMix(state *core.State) []byte {
-	return state.Randao[len(state.Randao) - 1].Bytes
-}
-
-// Returns the seed after randao was applied on the last slot of the epoch
-// will return error if not found
-func GetEpochSeed(state *core.State, epoch uint64) ([]byte, error) { // TODO - should be replaced with GetRandaoMix
-	if epoch == 0 {
-		return params.ChainConfig.GenesisSeed, nil
-	}
-
-	targetSlot := epoch * params.ChainConfig.SlotsInEpoch - 1 + params.ChainConfig.SlotsInEpoch
-	for _, d := range state.Randao {
-		if d.Slot == targetSlot {
-			return d.Bytes, nil
-		}
-	}
-	return []byte{}, fmt.Errorf("seed for slot %d not found", targetSlot)
+	return state.RandaoMix[epoch % params.ChainConfig.EpochsPerHistoricalVector]
 }
 
 /**

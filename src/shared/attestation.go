@@ -147,35 +147,6 @@ func GetAttestationCommittee(state *core.State, slot uint64, index uint64) ([]ui
 		)
 }
 
-
-// Vault committee is a randomly selected committee of BPs that are chosen to generate the pool's keys via DKG
-//
-// Pool committee is chosen randomly by shuffling a seed + category (pool %d committee)
-// The previous epoch's seed is used to choose the DKG committee as the current one (the block's epoch)
-func GetVaultCommittee(state *core.State, poolId uint64, epoch uint64) ([]uint64,error) {
-	// TODO - handle integer overflow
-	seed, err := GetEpochSeed(state, epoch - 1) // we always use the seed from previous epoch
-	if err != nil {
-		return []uint64{}, err
-	}
-
-	vault, err := ComputeCommittee(
-		GetActiveBlockProducers(state, epoch),
-		seed,
-		poolId,
-		params.ChainConfig.VaultSize)
-
-	//shuffled, err := shuffleActiveBPs(
-	//	GetActiveBlockProducers(state, epoch),
-	//	SliceToByte32(seed),
-	//	[]byte(fmt.Sprintf("pool %d committee", poolId)),
-	//)
-	if err != nil {
-		return nil, err
-	}
-	return vault, nil
-}
-
 /**
 def get_attesting_indices(state: BeaconState,
                           data: AttestationData,
@@ -276,7 +247,7 @@ func GetMatchingTargetAttestations(state *core.State, epoch uint64) ([]*core.Pen
 		if err != nil {
 			return nil, err
 		}
-		if bytes.Equal(att.Data.Target.Root, root.Bytes) {
+		if bytes.Equal(att.Data.Target.Root, root) {
 			ret = append(ret, att)
 		}
 	}
@@ -302,7 +273,7 @@ func GetMatchingHeadAttestations(state *core.State, epoch uint64) ([]*core.Pendi
 		if err != nil {
 			return nil, err
 		}
-		if bytes.Equal(att.Data.BeaconBlockRoot, root.Bytes) {
+		if bytes.Equal(att.Data.BeaconBlockRoot, root) {
 			ret = append(ret, att)
 		}
 	}

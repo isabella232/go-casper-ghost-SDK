@@ -51,7 +51,7 @@ func processRANDAO (state *core.State, block *core.Block) error {
 //     )
 func processRANDAONoVerify(state *core.State, block *core.Block) error {
 	latestMix := make([]byte, 32)
-	deepcopier.Copy(shared.GetLatestRandaoMix(state)).To(latestMix)
+	deepcopier.Copy(shared.GetRandaoMix(state, shared.GetCurrentEpoch(state))).To(latestMix)
 	hash := shared.Hash(block.Body.RandaoReveal)
 
 	if len(hash) != len(latestMix) {
@@ -62,10 +62,7 @@ func processRANDAONoVerify(state *core.State, block *core.Block) error {
 		latestMix[i] ^= x
 	}
 
-	state.Randao = append(state.Randao, &core.SlotAndBytes{
-		Slot:                state.CurrentSlot,
-		Bytes:               latestMix,
-	})
+	state.RandaoMix[shared.GetCurrentEpoch(state) % params.ChainConfig.EpochsPerHistoricalVector] = latestMix
 	return nil
 }
 

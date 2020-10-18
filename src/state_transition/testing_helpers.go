@@ -117,18 +117,12 @@ func generateTestState(t *testing.T, headSlot int) *core.State {
 	//		Active:true,
 	//	}
 	//}
-
 	ret := &core.State {
 		CurrentSlot: 0,
 		Validators:  bps,
-		Randao:          []*core.SlotAndBytes{
-			&core.SlotAndBytes{
-				Slot:	0,
-				Bytes:	params.ChainConfig.ZeroHash, // beacon chain uses an eth1 block hash as first seed
-			},
-		},
-		XBlockRoots:               []*core.SlotAndBytes{},
-		XStateRoots:               []*core.SlotAndBytes{},
+		RandaoMix:          	   make([][]byte, params.ChainConfig.EpochsPerHistoricalVector),
+		BlockRoots:                make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot),
+		StateRoots:                make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot),
 		PreviousEpochAttestations: []*core.PendingAttestation{},
 		CurrentEpochAttestations:  []*core.PendingAttestation{},
 		JustificationBits:         []byte{0},

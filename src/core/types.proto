@@ -15,11 +15,8 @@ message State {
     Fork Fork = 13;
 
     // past
-    repeated SlotAndBytes xBlockRoots = 21; // TODO - delete for BlockRoots
-    repeated bytes BlockRoots = 211;
-    repeated SlotAndBytes xStateRoots = 22; // TODO - delete for StateRoots
-    repeated bytes StateRoots = 221;
-    repeated SlotAndBytes Randao = 23; // TODO - delete for RandaoMix
+    repeated bytes BlockRoots = 21;
+    repeated bytes StateRoots = 22;
     repeated bytes RandaoMix = 24;
     repeated bytes HistoricalRoots = 25;
     bytes GenesisValidatorsRoot = 26;
@@ -56,11 +53,6 @@ message Validator {
     uint64 ActivationEligibilityEpoch = 9;
     uint64 WithdrawableEpoch = 10;
     bytes WithdrawalCredentials = 11;
-}
-
-message SlotAndBytes {
-    uint64 Slot = 1;
-    bytes Bytes = 2;
 }
 
 message StateCommitment {

@@ -16,22 +16,22 @@ func CopyState(state *core.State) *core.State {
 
 	ret.CurrentSlot = state.CurrentSlot
 
-	ret.XBlockRoots = make([]*core.SlotAndBytes, len(state.XBlockRoots))
-	for i, r := range state.XBlockRoots {
-		ret.XBlockRoots[i] = &core.SlotAndBytes{}
-		deepcopier.Copy(r).To(ret.XBlockRoots[i])
+	ret.BlockRoots = make([][]byte, len(state.BlockRoots))
+	for i, r := range state.BlockRoots {
+		ret.BlockRoots[i] = make([]byte, 0)
+		deepcopier.Copy(r).To(ret.BlockRoots[i])
 	}
 
-	ret.XBlockRoots = make([]*core.SlotAndBytes, len(state.XBlockRoots))
-	for i, r := range state.XBlockRoots {
-		ret.XBlockRoots[i] = &core.SlotAndBytes{}
-		deepcopier.Copy(r).To(ret.XBlockRoots[i])
+	ret.StateRoots = make([][]byte, len(state.StateRoots))
+	for i, r := range state.StateRoots {
+		ret.StateRoots[i] = make([]byte, 0)
+		deepcopier.Copy(r).To(ret.StateRoots[i])
 	}
 
-	ret.Randao = make([]*core.SlotAndBytes, len(state.Randao))
-	for i, r := range state.Randao {
-		ret.Randao[i] = &core.SlotAndBytes{}
-		deepcopier.Copy(r).To(ret.Randao[i])
+	ret.RandaoMix = make([][]byte, len(state.RandaoMix))
+	for i, r := range state.RandaoMix {
+		ret.RandaoMix[i] = make([]byte, 0)
+		deepcopier.Copy(r).To(ret.RandaoMix[i])
 	}
 
 	ret.Validators = make([]*core.Validator, len(state.Validators))

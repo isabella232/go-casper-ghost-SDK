@@ -61,7 +61,7 @@ def get_block_root(state: BeaconState, epoch: Epoch) -> Root:
     """
     return get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch))
  */
-func GetBlockRoot(state *core.State, epoch uint64) (*core.SlotAndBytes, error) {
+func GetBlockRoot(state *core.State, epoch uint64) ([]byte, error) {
 	return GetBlockRootAtSlot(state, ComputeStartSlotAtEpoch(epoch))
 }
 
@@ -73,14 +73,9 @@ def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:
     assert slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
     return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
  */
-func GetBlockRootAtSlot(state *core.State, slot uint64) (*core.SlotAndBytes, error) {
+func GetBlockRootAtSlot(state *core.State, slot uint64) ([]byte, error) {
 	if slot >= state.CurrentSlot || state.CurrentSlot > slot + params.ChainConfig.SlotsPerHistoricalRoot {
 		return nil, fmt.Errorf("block root at slot not found")
 	}
-	for _, blk := range state.XBlockRoots {
-		if blk.Slot == slot {
-			return blk, nil
-		}
-	}
-	return nil, fmt.Errorf("block root at slot not found")
+	return state.BlockRoots[slot % params.ChainConfig.SlotsPerHistoricalRoot], nil
 }

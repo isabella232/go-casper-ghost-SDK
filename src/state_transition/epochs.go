@@ -52,7 +52,7 @@ func processJustificationAndFinalization(state *core.State) error {
 		}
 		state.CurrentJustifiedCheckpoint = &core.Checkpoint{
 			Epoch:                previousEpoch,
-			Root:                 root.Bytes,
+			Root:                 root,
 		}
 		newBits.SetBitAt(1, true)
 		state.JustificationBits = newBits
@@ -64,7 +64,7 @@ func processJustificationAndFinalization(state *core.State) error {
 		}
 		state.CurrentJustifiedCheckpoint = &core.Checkpoint{
 			Epoch:                currentEpoch,
-			Root:                 root.Bytes,
+			Root:                 root,
 		}
 		newBits.SetBitAt(0, true)
 		state.JustificationBits = newBits
@@ -114,7 +114,7 @@ func calculateAttestingBalances(state *core.State) (prev *Balances, current *Bal
 				return nil, err
 			}
 			if  root != nil {
-				if bytes.Equal(att.Data.Target.Root, root.Bytes) {
+				if bytes.Equal(att.Data.Target.Root, root) {
 					matchingAtt = append(matchingAtt, att)
 				}
 			} else {
