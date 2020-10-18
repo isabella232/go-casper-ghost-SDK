@@ -136,7 +136,7 @@ func calculateAttestingBalances(state *core.State) (prev *Balances, current *Bal
 				return nil, err
 			}
 			for _, idx := range attestingIndices {
-				bp := shared.GetBlockProducer(state, idx)
+				bp := shared.GetValidator(state, idx)
 				if bp != nil && !bp.Slashed {
 					ret.AttestingIndexes = append(ret.AttestingIndexes, idx)
 					ret.AttestingBalance += bp.EffectiveBalance
@@ -145,9 +145,9 @@ func calculateAttestingBalances(state *core.State) (prev *Balances, current *Bal
 		}
 
 		// get active balance
-		activeBps := shared.GetActiveBlockProducers(state, shared.GetCurrentEpoch(state))
+		activeBps := shared.GetActiveValidators(state, shared.GetCurrentEpoch(state))
 		for _, idx := range activeBps {
-			bp := shared.GetBlockProducer(state, idx)
+			bp := shared.GetValidator(state, idx)
 			if bp != nil {
 				ret.ActiveBalance += bp.EffectiveBalance
 			}
@@ -199,7 +199,7 @@ func ProcessRegistryUpdates(state *core.State) {
 		}
 
 		if shared.IsActiveBP(bp, shared.GetCurrentEpoch(state)) && bp.EffectiveBalance <= params.ChainConfig.EjectionBalance {
-			shared.InitiateBlockProducerExit(state, bp.Id)
+			shared.InitiateValidatorExit(state, bp.Id)
 		}
 	}
 

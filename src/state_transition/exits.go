@@ -37,7 +37,7 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
  */
 func processExit(state *core.State, exit *core.SignedVoluntaryExit) error {
 	voluntaryExit := exit.Exit
-	bp := shared.GetBlockProducer(state, voluntaryExit.ValidatorIndex)
+	bp := shared.GetValidator(state, voluntaryExit.ValidatorIndex)
 	if bp == nil {
 		return fmt.Errorf("process exit: BP %d not found", voluntaryExit.ValidatorIndex)
 	}
@@ -74,7 +74,7 @@ func processExit(state *core.State, exit *core.SignedVoluntaryExit) error {
 		return fmt.Errorf("process exit: sig invalid")
 	}
 
-	shared.InitiateBlockProducerExit(state, voluntaryExit.ValidatorIndex)
+	shared.InitiateValidatorExit(state, voluntaryExit.ValidatorIndex)
 
 	return nil
 }

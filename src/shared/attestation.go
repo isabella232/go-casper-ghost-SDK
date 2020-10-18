@@ -52,7 +52,7 @@ func IsValidIndexedAttestation(state *core.State, attestation *core.IndexedAttes
 	// Verify aggregate signature
 	pubkeys := [][]byte{}
 	for _, index := range indices {
-		bp := GetBlockProducer(state, index)
+		bp := GetValidator(state, index)
 		if bp == nil {
 			return false, fmt.Errorf("BP not found")
 		}
@@ -109,7 +109,7 @@ def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
  */
 func GetCommitteeCountPerSlot(state *core.State, slot uint64) uint64 {
 	epoch := ComputeEpochAtSlot(slot)
-	bps := GetActiveBlockProducers(state, epoch)
+	bps := GetActiveValidators(state, epoch)
 	committeePerSlot := uint64(len(bps)) / params.ChainConfig.SlotsInEpoch / params.ChainConfig.MinAttestationCommitteeSize
 
 	if committeePerSlot > params.ChainConfig.MaxCommitteesPerSlot {
@@ -140,7 +140,7 @@ func GetAttestationCommittee(state *core.State, slot uint64, index uint64) ([]ui
 	committeesPerSlot := GetCommitteeCountPerSlot(state, slot)
 	seed := GetSeed(state, epoch, params.ChainConfig.DomainBeaconAttester)
 	return ComputeCommittee(
-			GetActiveBlockProducers(state, epoch),
+			GetActiveValidators(state, epoch),
 			seed[:],
 			(slot & params.ChainConfig.SlotsInEpoch) * committeesPerSlot + index,
 			committeesPerSlot * params.ChainConfig.SlotsInEpoch,
@@ -203,7 +203,7 @@ func GetUnslashedAttestingIndices(state *core.State, attestations []*core.Pendin
 
 	// Remove the slashed validator indices.
 	for i := range output {
-		bp := GetBlockProducer(state, output[i])
+		bp := GetValidator(state, output[i])
 		if bp != nil && bp.Slashed {
 			output = append(output[:i], output[i+1:]...)
 		}

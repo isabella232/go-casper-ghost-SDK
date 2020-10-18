@@ -29,9 +29,9 @@ func TestStateCopying(t *testing.T) {
 	require.EqualValues(t, preRoot, newStateRoot)
 
 	// test manipulating prams on new state copying
-	bp := shared.GetBlockProducer(newState, 0)
+	bp := shared.GetValidator(newState, 0)
 	bp.CDTBalance = 100000
-	require.NotEqualValues(t, shared.GetBlockProducer(state, 0).CDTBalance, 100000)
+	require.NotEqualValues(t, shared.GetValidator(state, 0).CDTBalance, 100000)
 
 	shared.GetPool(newState, 0).Active = false
 	require.NotEqualValues(t, shared.GetPool(state, 0).Active, shared.GetPool(newState, 0).Active)

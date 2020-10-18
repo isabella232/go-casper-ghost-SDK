@@ -77,7 +77,7 @@ func CopyState(state *core.State) *core.State {
 }
 
 // will return nil if not found or inactive
-func GetBlockProducer(state *core.State, id uint64) *core.Validator {
+func GetValidator (state *core.State, id uint64) *core.Validator {
 	for _, p := range state.Validators {
 		if p.GetId() == id && p.Active {
 			return p
@@ -98,7 +98,7 @@ func IsValidGenesisState(state *core.State) bool {
 	if state.GenesisTime < params.ChainConfig.MinGenesisTime {
 		return false
 	}
-	if uint64(len(GetActiveBlockProducers(state, params.ChainConfig.GenesisEpoch))) < params.ChainConfig.MinGenesisActiveBPCount {
+	if uint64(len(GetActiveValidators(state, params.ChainConfig.GenesisEpoch))) < params.ChainConfig.MinGenesisActiveBPCount {
 		return false
 	}
 	return true

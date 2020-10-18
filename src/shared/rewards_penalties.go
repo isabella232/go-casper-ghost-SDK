@@ -18,7 +18,7 @@ def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
 func GetTotalStake(state *core.State, indices []uint64) uint64 {
 	sum := uint64(0)
 	for _, index := range indices {
-		bp := GetBlockProducer(state, index)
+		bp := GetValidator(state, index)
 		if bp != nil {
 			sum += bp.EffectiveBalance
 		}
@@ -39,7 +39,7 @@ def get_total_active_balance(state: BeaconState) -> Gwei:
     return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
  */
 func GetTotalActiveStake(state *core.State) uint64 {
-	indices := GetActiveBlockProducers(state, GetCurrentEpoch(state))
+	indices := GetActiveValidators(state, GetCurrentEpoch(state))
 	return GetTotalStake(state, indices)
 }
 
@@ -51,7 +51,7 @@ def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
  */
 func GetBaseReward(state *core.State, index uint64) (uint64, error) {
 	totalBalance := GetTotalActiveStake(state)
-	if bp := GetBlockProducer(state, index); bp != nil {
+	if bp := GetValidator(state, index); bp != nil {
 		effectiveBalance := bp.EffectiveBalance
 		return effectiveBalance * params.ChainConfig.BaseRewardFactor / IntegerSquareRoot(totalBalance), nil
 	} else {
@@ -345,7 +345,7 @@ func GetInactivityPenaltyDeltas(state *core.State) ([]uint64, []uint64, error) {
 			}
 			penalties[index] += params.ChainConfig.BaseRewardsPerEpoch * base - proposer
 			if !matchingTargetAttestingIndicesMap[index] {
-				effectiveBalance := GetBlockProducer(state, index).EffectiveBalance
+				effectiveBalance := GetValidator(state, index).EffectiveBalance
 				penalties[index] += effectiveBalance * GetFinalityDelay(state) / params.ChainConfig.InactivityPenaltyQuotient
 			}
 		}

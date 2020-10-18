@@ -124,7 +124,7 @@ func verifyBlockSig(state *core.State, signedBlock *core.SignedBlock) error {
 	epoch := shared.GetCurrentEpoch(state)
 
 	// verify sig
-	proposer := shared.GetBlockProducer(state, block.GetProposer())
+	proposer := shared.GetValidator(state, block.GetProposer())
 	if proposer == nil {
 		return fmt.Errorf("proposer not found")
 	}

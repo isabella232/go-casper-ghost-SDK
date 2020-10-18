@@ -94,7 +94,7 @@ func ComputeProposerIndex(state *core.State, indices []uint64, seed []byte) (uin
 		b := append(seed[:], Bytes8(i / 32)...)
 		randomByte := Hash(b)[i%32]
 
-		bp := GetBlockProducer(state, candidateIndex)
+		bp := GetValidator(state, candidateIndex)
 		if bp == nil {
 			return 0, fmt.Errorf("could not find shuffled BP index %d", candidateIndex)
 		}
@@ -124,7 +124,7 @@ def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[V
     """
     return [ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
  */
-func GetActiveBlockProducers(state *core.State, epoch uint64) []uint64 {
+func GetActiveValidators(state *core.State, epoch uint64) []uint64 {
 	var activeBps []uint64
 	for _, bp := range state.Validators {
 		if IsActiveBP(bp, epoch) {
@@ -143,7 +143,7 @@ def get_validator_churn_limit(state: BeaconState) -> uint64:
     return max(MIN_PER_EPOCH_CHURN_LIMIT, uint64(len(active_validator_indices)) // CHURN_LIMIT_QUOTIENT)
  */
 func GetBPChurnLimit(state *core.State) uint64 {
-	activeBPs := GetActiveBlockProducers(state, GetCurrentEpoch(state))
+	activeBPs := GetActiveValidators(state, GetCurrentEpoch(state))
 	churLimit := uint64(len(activeBPs)) / params.ChainConfig.ChurnLimitQuotient
 	if churLimit < params.ChainConfig.MinPerEpochChurnLimit {
 		churLimit = params.ChainConfig.MinPerEpochChurnLimit
@@ -167,7 +167,7 @@ func GetBlockProposerIndex(state *core.State) (uint64, error) {
 	SeedWithSlot := append(seed[:], Bytes8(state.CurrentSlot)...)
 	hash := Hash(SeedWithSlot)
 
-	bps := GetActiveBlockProducers(state, epoch)
+	bps := GetActiveValidators(state, epoch)
 	return ComputeProposerIndex(state, bps, hash[:])
 }
 
@@ -179,7 +179,7 @@ def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> 
     state.balances[index] += delta
  */
 func IncreaseBalance(state *core.State, index uint64, delta uint64) {
-	if bp := GetBlockProducer(state, index); bp != nil {
+	if bp := GetValidator(state, index); bp != nil {
 		bp.Balance += delta
 	}
 }
@@ -192,7 +192,7 @@ def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> 
     state.balances[index] = 0 if delta > state.balances[index] else state.balances[index] - delta
 */
 func DecreaseBalance(state *core.State, index uint64, delta uint64) {
-	if bp := GetBlockProducer(state, index); bp != nil {
+	if bp := GetValidator(state, index); bp != nil {
 		if delta > bp.Balance {
 			bp.Balance = 0
 		} else {
@@ -222,8 +222,8 @@ def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
     validator.exit_epoch = exit_queue_epoch
     validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
  */
-func InitiateBlockProducerExit(state *core.State, index uint64) {
-	bp := GetBlockProducer(state, index)
+func InitiateValidatorExit(state *core.State, index uint64) {
+	bp := GetValidator(state, index)
 	if bp == nil {
 		return
 	}
@@ -285,10 +285,10 @@ def slash_validator(state: BeaconState,
     increase_balance(state, proposer_index, proposer_reward)
     increase_balance(state, whistleblower_index, Gwei(whistleblower_reward - proposer_reward))
  */
-func SlashBlockProducer(state *core.State, slashedIndex uint64) error {
+func SlashValidator(state *core.State, slashedIndex uint64) error {
 	epoch := GetCurrentEpoch(state)
-	InitiateBlockProducerExit(state, slashedIndex)
-	bp := GetBlockProducer(state, slashedIndex)
+	InitiateValidatorExit(state, slashedIndex)
+	bp := GetValidator(state, slashedIndex)
 	if bp == nil {
 		return fmt.Errorf("slash BP: block producer not found")
 	}

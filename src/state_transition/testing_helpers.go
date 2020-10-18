@@ -53,7 +53,7 @@ func generateAttestations(
 	aggBits := make(bitfield.Bitlist, len(expectedCommittee)) // for bytes
 	signed := uint64(0)
 	for i, bpId := range expectedCommittee {
-		bp := shared.GetBlockProducer(state, bpId)
+		bp := shared.GetValidator(state, bpId)
 		sk := &bls.SecretKey{}
 		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", bp.Id))))
 

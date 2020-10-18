@@ -59,7 +59,7 @@ func processProposerSlashing(state *core.State, slashing *core.ProposerSlashing)
 		return fmt.Errorf("proposer slashing: block headers are equal")
 	}
 	// Verify the proposer is slashable
-	proposer := shared.GetBlockProducer(state, header1.ProposerIndex)
+	proposer := shared.GetValidator(state, header1.ProposerIndex)
 	if proposer == nil {
 		return fmt.Errorf("proposer slashing: block producer not found")
 	}
@@ -137,12 +137,12 @@ func ProcessAttesterSlashing(state *core.State, slashing *core.AttesterSlashing)
 	slashedAny := false
 	indices := slashableAttesterIndices(slashing)
 	for _, index := range indices {
-		bp := shared.GetBlockProducer(state, index)
+		bp := shared.GetValidator(state, index)
 		if bp == nil {
 			return fmt.Errorf("attester slashing: BP %d not found", index)
 		}
 		if shared.IsSlashableBp(bp, shared.GetCurrentEpoch(state)) {
-			if err := shared.SlashBlockProducer(state, index); err != nil {
+			if err := shared.SlashValidator(state, index); err != nil {
 				return err
 			}
 			slashedAny = true

@@ -164,7 +164,7 @@ func validateAttestationSignature(state *core.State, attestation *core.Attestati
 	pks := make([]bls.PublicKey,0)
 
 	for i, id := range expectedCommittee {
-		bp := shared.GetBlockProducer(state, id)
+		bp := shared.GetValidator(state, id)
 		if bp == nil {
 			return fmt.Errorf("BP %d is inactivee ", id)
 		}

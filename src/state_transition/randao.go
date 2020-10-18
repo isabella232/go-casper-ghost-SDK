@@ -20,7 +20,7 @@ import (
 //    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
 //    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func processRANDAO (state *core.State, block *core.Block) error {
-	bp := shared.GetBlockProducer(state, block.Proposer)
+	bp := shared.GetValidator(state, block.Proposer)
 	if bp == nil {
 		return fmt.Errorf("could not find BP")
 	}
