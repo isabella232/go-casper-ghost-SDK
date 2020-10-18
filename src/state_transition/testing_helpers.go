@@ -3,14 +3,16 @@ package state_transition
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/stretchr/testify/require"
 	"github.com/ulule/deepcopier"
+	"log"
 	"testing"
 )
 
@@ -19,12 +21,18 @@ func toByte(str string) []byte {
 	return ret
 }
 
-func defaultEth1Data() *core.ETH1Data {
-	return &core.ETH1Data{
-		DepositRoot:          nil,
-		DepositCount:         0,
-		BlockHash:            nil,
+func defaultEth1Data() (*core.ETH1Data, error) {
+	trie, err := trieutil.NewTrie(int(params.ChainConfig.DepositContractTreeDepth))
+	if err != nil {
+		return nil, err
 	}
+	depositRoot := trie.Root()
+
+	return &core.ETH1Data{
+		DepositRoot:          depositRoot[:],
+		DepositCount:         0,
+		BlockHash:            toByte("8049cb6db44dc94a52a9702779c0b4d5d77164bc56a913da1203563de5193405"),
+	}, nil
 }
 
 func initBlockHeader() (*core.BlockHeader, error) {
@@ -46,8 +54,12 @@ type StateTestContext struct {
 }
 
 func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, genesisTime uint64) (*StateTestContext, error) {
+	var err error
 	if eth1Data == nil {
-		eth1Data = defaultEth1Data()
+		eth1Data, err = defaultEth1Data()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	initBlockHeader, err := initBlockHeader()
@@ -70,7 +82,7 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 		stateRoots[i] = params.ChainConfig.ZeroHash
 	}
 
-	genesisValdiatorRoot, err := ssz.HashTreeRoot([]*core.Validator{})
+	genesisValidatorRoot, err := ssz.HashTreeRoot([]*core.Validator{})
 	if err != nil {
 		return nil, err
 	}
@@ -85,14 +97,14 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 				CurrentVersion:       config.GenesisForkVersion,
 				Epoch:                config.GenesisEpoch,
 			},
-			BlockRoots:                  blockRoots,
-			StateRoots:                  stateRoots,
-			RandaoMix:                   randaoMixes,
-			HistoricalRoots:             [][]byte{},
-			GenesisValidatorsRoot:       genesisValdiatorRoot[:],
-			PreviousEpochAttestations:   []*core.PendingAttestation{},
-			CurrentEpochAttestations:    []*core.PendingAttestation{},
-			JustificationBits:           []byte{0},
+			BlockRoots:                blockRoots,
+			StateRoots:                stateRoots,
+			RandaoMix:                 randaoMixes,
+			HistoricalRoots:           [][]byte{},
+			GenesisValidatorsRoot:     genesisValidatorRoot[:],
+			PreviousEpochAttestations: []*core.PendingAttestation{},
+			CurrentEpochAttestations:  []*core.PendingAttestation{},
+			JustificationBits:         []byte{0},
 			PreviousJustifiedCheckpoint: &core.Checkpoint{
 				Epoch:                0,
 				Root:                 params.ChainConfig.ZeroHash,
@@ -112,6 +124,85 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 			Slashings:                   []uint64{},
 		},
 	}, nil
+}
+
+func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *StateTestContext {
+	if err := bls.Init(bls.BLS12_381); err != nil {
+		log.Fatal(err)
+	}
+	if err := bls.SetETHmode(bls.EthModeDraft07); err != nil {
+		log.Fatal(err)
+	}
+
+	var leaves [][]byte
+	deposits := make([]*core.Deposit, validatorIndexEnd)
+	for i := uint64(0) ; i < validatorIndexEnd ; i++ {
+		sk := &bls.SecretKey{}
+		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
+
+		depositMessage := &core.DepositMessage{
+			PublicKey:             sk.GetPublicKey().Serialize(),
+			WithdrawalCredentials: []byte("test_withdrawal_cred"),
+			Amount:                32 * 10^18,
+		}
+		root, err := ssz.HashTreeRoot(depositMessage)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// inser into the trie
+		depositData := &core.Deposit_DepositData{
+			PublicKey:             depositMessage.PublicKey,
+			WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+			Amount:                depositMessage.Amount,
+			Signature:             sk.SignByte(root[:]).Serialize(),
+		}
+		deposits[i] = &core.Deposit{
+			Proof:                nil,
+			Data:                 depositData,
+		}
+		root, err = ssz.HashTreeRoot(depositData)
+		if err != nil {
+			log.Fatal(err)
+		}
+		leaves = append(leaves, root[:])
+	}
+
+	var trie *trieutil.SparseMerkleTrie
+	var err error
+	if len(leaves) > 0 {
+		trie, err = trieutil.GenerateTrieFromItems(leaves, int(params.ChainConfig.DepositContractTreeDepth))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		trie, err = trieutil.NewTrie(int(params.ChainConfig.DepositContractTreeDepth))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	depositRoot := trie.Root()
+	c.State.Eth1Data.DepositRoot = depositRoot[:]
+
+	// process
+	for _, deposit := range deposits {
+		// Add validator and balance entries
+		c.State.Validators = append(c.State.Validators, GetBPFromDeposit(c.State, deposit))
+	}
+
+	// update genesis root
+	genesisValidatorRoot, err := ssz.HashTreeRoot(c.State.Validators)
+	if err != nil {
+		log.Fatal(err)
+	}
+	c.State.GenesisValidatorsRoot = genesisValidatorRoot[:]
+
+	return c
+}
+
+func (c *StateTestContext) ProgressSlots(endSlot uint64) {
+
 }
 
 

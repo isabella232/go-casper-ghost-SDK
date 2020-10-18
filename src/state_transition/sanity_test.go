@@ -1,17 +1,20 @@
 package state_transition
 
 import (
+	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestSanity(t *testing.T) {
-	_, err := NewStateTestContext(
+	ctx, err := NewStateTestContext(
 			params.ChainConfig,
 			nil,
 			0,
 		)
 	require.NoError(t, err)
+	ctx.PopulateGenesisValidator(10)
 
+	fmt.Printf("")
 }
