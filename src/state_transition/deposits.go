@@ -6,6 +6,8 @@ import (
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func ProcessDeposits(state *core.State, deposits []*core.Deposit) error {
@@ -112,7 +114,8 @@ func verifyDeposit(state *core.State, deposit *core.Deposit) error {
 	if err != nil {
 		return fmt.Errorf("could not tree hash deposit data")
 	}
-	if ok := shared.VerifyMerkleBranch(
+
+	if ok := trieutil.VerifyMerkleBranch(
 			receiptRoot,
 			leaf[:],
 			int(state.Eth1DepositIndex),
@@ -141,7 +144,7 @@ def get_validator_from_deposit(state: BeaconState, deposit: Deposit) -> Validato
  */
 func GetBPFromDeposit(state *core.State, deposit *core.Deposit) *core.Validator {
 	amount := deposit.Data.Amount
-	effBalance := shared.Min(amount - amount % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
+	effBalance := mathutil.Min(amount - amount % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
 
 	return &core.Validator {
 		Id:                         uint64(len(state.Validators)),

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/wealdtech/go-bytesutil"
 )
 
 /**
@@ -85,14 +88,14 @@ func ComputeProposerIndex(state *core.State, indices []uint64, seed []byte) (uin
 	i := uint64(0)
 	total := uint64(len(indices))
 	for {
-		idx, err := computeShuffledIndex(i % total, total, SliceToByte32(seed), true,10) // TODO - shuffle round via config
+		idx, err := computeShuffledIndex(i % total, total, bytesutil.ToBytes32(seed), true,10) // TODO - shuffle round via config
 		if err != nil {
 			return 0, err
 		}
 
 		candidateIndex := indices[idx]
-		b := append(seed[:], Bytes8(i / 32)...)
-		randomByte := Hash(b)[i%32]
+		b := append(seed[:], bytesutil.Bytes8(i / 32)...)
+		randomByte := hashutil.Hash(b)[i%32]
 
 		bp := GetValidator(state, candidateIndex)
 		if bp == nil {
@@ -164,8 +167,8 @@ def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndex:
 func GetBlockProposerIndex(state *core.State) (uint64, error) {
 	epoch := GetCurrentEpoch(state)
 	seed := GetSeed(state, epoch, params.ChainConfig.DomainBeaconProposer)
-	SeedWithSlot := append(seed[:], Bytes8(state.CurrentSlot)...)
-	hash := Hash(SeedWithSlot)
+	SeedWithSlot := append(seed[:], bytesutil.Bytes8(state.CurrentSlot)...)
+	hash := hashutil.Hash(SeedWithSlot)
 
 	bps := GetActiveValidators(state, epoch)
 	return ComputeProposerIndex(state, bps, hash[:])
@@ -293,7 +296,7 @@ func SlashValidator(state *core.State, slashedIndex uint64) error {
 		return fmt.Errorf("slash BP: block producer not found")
 	}
 	bp.Slashed = true
-	bp.WithdrawableEpoch = Max(bp.WithdrawableEpoch, epoch + params.ChainConfig.EpochsPerSlashingVector)
+	bp.WithdrawableEpoch = mathutil.Max(bp.WithdrawableEpoch, epoch + params.ChainConfig.EpochsPerSlashingVector)
 	state.Slashings[epoch % params.ChainConfig.EpochsPerSlashingVector] += bp.EffectiveBalance
 	DecreaseBalance(state, slashedIndex, bp.EffectiveBalance / params.ChainConfig.MinSlashingPenaltyQuotient)
 

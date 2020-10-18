@@ -6,6 +6,7 @@ import (
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/ulule/deepcopier"
 )
 
@@ -52,7 +53,7 @@ func processRANDAO (state *core.State, block *core.Block) error {
 func processRANDAONoVerify(state *core.State, block *core.Block) error {
 	latestMix := make([]byte, 32)
 	deepcopier.Copy(shared.GetRandaoMix(state, shared.GetCurrentEpoch(state))).To(latestMix)
-	hash := shared.Hash(block.Body.RandaoReveal)
+	hash := hashutil.Hash(block.Body.RandaoReveal)
 
 	if len(hash) != len(latestMix) {
 		return fmt.Errorf("randao reveal length doesn't match existing mix")

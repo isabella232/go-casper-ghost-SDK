@@ -5,6 +5,7 @@ import (
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 func ProcessProposerSlashings(state *core.State, slashings []*core.ProposerSlashing) error {
@@ -161,5 +162,5 @@ func slashableAttesterIndices(slashing *core.AttesterSlashing) []uint64 {
 	}
 	indices1 := slashing.Attestation_1.AttestingIndices
 	indices2 := slashing.Attestation_2.AttestingIndices
-	return shared.IntersectionUint64(indices1, indices2)
+	return sliceutil.IntersectionUint64(indices1, indices2)
 }

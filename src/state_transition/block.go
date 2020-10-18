@@ -8,6 +8,7 @@ import (
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 func (st *StateTransition) ProcessBlock(state *core.State, signedBlock *core.SignedBlock) error {
@@ -180,7 +181,7 @@ def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
  */
 func processOperations(state *core.State, st *StateTransition, body *core.BlockBody) error {
 	// Verify that outstanding deposits are processed up to the maximum number of deposits
-	if uint64(len(body.Deposits)) != shared.Min(params.ChainConfig.MaxDeposits, state.Eth1Data.DepositCount - state.Eth1DepositIndex) {
+	if uint64(len(body.Deposits)) != mathutil.Min(params.ChainConfig.MaxDeposits, state.Eth1Data.DepositCount - state.Eth1DepositIndex) {
 		return fmt.Errorf("number of deposits in body invalid")
 	}
 

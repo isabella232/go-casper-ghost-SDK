@@ -7,6 +7,7 @@ import (
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
 	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func SignBlock(block *core.Block, sk []byte, domain []byte) (*bls.Sign, error) {
@@ -204,7 +205,7 @@ func ComputeForkDigest(version []byte, root []byte) ([4]byte, error) {
 	if err != nil {
 		return [4]byte{}, err
 	}
-	return ToBytes4(dataRoot[:]), nil
+	return bytesutil.ToBytes4(dataRoot[:]), nil
 }
 
 /**

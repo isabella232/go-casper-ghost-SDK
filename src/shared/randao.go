@@ -3,6 +3,8 @@ package shared
 import (
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/wealdtech/go-bytesutil"
 )
 
 /**
@@ -27,8 +29,8 @@ def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes
 func GetSeed(state *core.State, epoch uint64, domainType []byte) [32]byte {
 	randaoMix := GetRandaoMix(state, epoch + params.ChainConfig.EpochsPerHistoricalVector - params.ChainConfig.MinSeedLookahead - 1)
 
-	seed := append(domainType[:], Bytes8(epoch)...)
+	seed := append(domainType[:], bytesutil.Bytes8(epoch)...)
 	seed = append(seed, randaoMix...)
 
-	return Hash(domainType)
+	return hashutil.Hash(domainType)
 }

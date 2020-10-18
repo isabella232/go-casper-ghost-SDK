@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 /**
@@ -53,7 +54,7 @@ func GetBaseReward(state *core.State, index uint64) (uint64, error) {
 	totalBalance := GetTotalActiveStake(state)
 	if bp := GetValidator(state, index); bp != nil {
 		effectiveBalance := bp.EffectiveBalance
-		return effectiveBalance * params.ChainConfig.BaseRewardFactor / IntegerSquareRoot(totalBalance), nil
+		return effectiveBalance * params.ChainConfig.BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance), nil
 	} else {
 		return 0, fmt.Errorf("could not find BP %d", index)
 	}

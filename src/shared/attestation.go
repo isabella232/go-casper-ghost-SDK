@@ -6,6 +6,7 @@ import (
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/wealdtech/go-bytesutil"
 	"sort"
 )
 
@@ -87,7 +88,7 @@ func ComputeCommittee(indices []uint64, seed []byte, index uint64, count uint64)
 
 	ret := []uint64{}
 	for i := start ; i < end ; i++ {
-		idx, err := computeShuffledIndex(i, uint64(len(indices)), SliceToByte32(seed), true,10) // TODO - shuffle round via config
+		idx, err := computeShuffledIndex(i, uint64(len(indices)), bytesutil.ToBytes32(seed), true,10) // TODO - shuffle round via config
 		if err != nil {
 			return []uint64{}, err
 		}

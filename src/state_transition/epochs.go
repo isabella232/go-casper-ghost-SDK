@@ -7,6 +7,7 @@ import (
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
 	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"sort"
 )
 
@@ -240,7 +241,7 @@ def process_slashings(state: BeaconState) -> None:
 func ProcessSlashings(state *core.State) {
 	epoch := shared.GetCurrentEpoch(state)
 	totalBalance := shared.GetTotalActiveStake(state)
-	adjustedTotalSlashingBalance := shared.Min(
+	adjustedTotalSlashingBalance := mathutil.Min(
 			shared.SumSlashings(state) * params.ChainConfig.ProportionalSlashingMultiplier,
 			totalBalance,
 		)
@@ -300,7 +301,7 @@ func ProcessFinalUpdates(state *core.State) error {
 		downwardThreshold := hysteresisIncrement * params.ChainConfig.HysteresisDownwardMultiplier
 		upwardThreshold := hysteresisIncrement * params.ChainConfig.HysteresisUpwardMultiplier
 		if bp.Balance + downwardThreshold < bp.EffectiveBalance || bp.EffectiveBalance + upwardThreshold < bp.Balance {
-			bp.EffectiveBalance = shared.Min(bp.Balance - bp.Balance % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
+			bp.EffectiveBalance = mathutil.Min(bp.Balance - bp.Balance % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
 		}
 	}
 
