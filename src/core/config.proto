@@ -1,0 +1,76 @@
+syntax = "proto3";
+package state;
+
+option go_package = ".;core";
+
+message PoolsChainConfig {
+  // Time
+  uint64 SlotsInEpoch = 100;
+  uint64 MinAttestationInclusionDelay = 101;
+  uint64 MaxSeedLookahead = 102;
+  uint64 MinSeedLookahead = 103;
+  uint64 SlotsPerHistoricalRoot = 104;
+  uint64 MinValidatorWithdrawabilityDelay = 105;
+  uint64 MinEpochsToInactivityPenalty = 106;
+  uint64 EpochsPerETH1VotingPeriod = 107;
+  uint64 ShardCommitteePeriod = 108;
+
+  // Misc
+  uint64 MinAttestationCommitteeSize = 200;
+  uint64 MaxAttestationCommitteeSize = 201;
+  uint64 MaxCommitteesPerSlot = 202;
+  uint64 ChurnLimitQuotient = 203;
+  uint64 VaultSize = 204;
+  uint64 MinPerEpochChurnLimit = 205;
+  uint64 MinGenesisTime = 206;
+  uint64 MinGenesisActiveBPCount = 207;
+  uint64 ProportionalSlashingMultiplier = 208;
+  uint64 HysteresisQuotient = 209;
+  uint64 HysteresisDownwardMultiplier = 210;
+  uint64 HysteresisUpwardMultiplier = 211;
+
+  // constants
+  uint64 FarFutureEpoch = 300;
+  bytes ZeroHash = 301;
+  bytes GenesisSeed = 302; // should be auto calculated somehow
+  uint64 GenesisEpoch = 303;
+  uint64 BaseRewardsPerEpoch = 304;
+  uint64 DepositContractTreeDepth = 305;
+
+
+  // state list lengths
+  uint64 EpochsPerHistoricalVector = 400;
+  uint64 EpochsPerSlashingVector = 401;
+
+  // rewards and penalties
+  uint64 BaseRewardFactor = 500; // base reward for attestation/ proposer
+  uint64 DKGReward = 501; // base DKG reward for creating new pools TODO - change naming
+  uint64 BaseEth2DutyReward = 502; // base reward for execution summary participation
+  uint64 MinSlashingPenaltyQuotient = 503;
+  uint64 WhitstleblowerRewardQuotient = 504;
+  uint64 ProposerRewardQuotient = 505;
+  uint64 InactivityPenaltyQuotient = 506;
+
+  // domain
+  bytes DomainBeaconProposer = 600;
+  bytes DomainBeaconAttester = 601;
+  bytes DomainRandao = 602;
+  bytes DomainDeposit = 603;
+  bytes DomainVoluntaryExit = 604;
+  bytes DomainSelectionProof = 605;
+  bytes DomainAggregateAndProof = 606;
+  bytes GenesisForkVersion = 607;
+
+
+  // Gwei values
+  uint64 MaxEffectiveBalance = 700;
+  uint64 EffectiveBalanceIncrement = 701;
+  uint64 EjectionBalance = 702;
+
+  // Max operations per block
+  uint64 MaxProposerSlashings = 800;
+  uint64 MaxAttesterSlashings = 801;
+  uint64 MaxAttestations = 802;
+  uint64 MaxDeposits = 803;
+  uint64 MaxVoluntaryExits = 804;
+}
