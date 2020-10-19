@@ -68,22 +68,22 @@ message DepositData {
 message Block {
   uint64 Slot = 1;
   uint64 Proposer = 2;
-  bytes ParentRoot = 3;
-  bytes StateRoot = 4;
+  bytes ParentRoot = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes StateRoot = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
   BlockBody Body = 5;
 }
 
 message SignedBlock {
   Block Block = 1;
-  bytes Signature = 2;
+  bytes Signature = 2 [(gogoproto.moretags) = "ssz-size:\"96\""];
 }
 
 message BlockHeader {
   uint64 Slot = 1;
   uint64 ProposerIndex = 2;
-  bytes ParentRoot = 3;
-  bytes StateRoot = 4;
-  bytes BodyRoot = 5;
+  bytes ParentRoot = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes StateRoot = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes BodyRoot = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
 message SignedBlockHeader {
@@ -95,9 +95,9 @@ message SignedBlockHeader {
 }
 
 message ETH1Data {
-  bytes DepositRoot = 1;
+  bytes DepositRoot = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
   uint64 DepositCount = 2;
-  bytes BlockHash = 3;
+  bytes BlockHash = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
 // Proposer slashings are proofs that a slashable offense has been committed by

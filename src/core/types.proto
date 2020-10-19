@@ -15,15 +15,15 @@ message State {
     Fork Fork = 13;
 
     // past
-    repeated bytes BlockRoots = 21;
-    repeated bytes StateRoots = 22;
-    repeated bytes RandaoMix = 24;
-    repeated bytes HistoricalRoots = 25;
-    bytes GenesisValidatorsRoot = 26;
+    repeated bytes BlockRoots = 21;// [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
+    repeated bytes StateRoots = 22;// [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
+    repeated bytes RandaoMix = 24; // [(gogoproto.moretags) = "ssz-size:\"randao_mixes.size\""];
+    repeated bytes HistoricalRoots = 25 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"16777216\""];
+    bytes GenesisValidatorsRoot = 26 [(gogoproto.moretags) = "ssz-size:\"32\""];;
 
     // Finalization & justification
-    repeated PendingAttestation PreviousEpochAttestations = 31;
-    repeated PendingAttestation CurrentEpochAttestations = 32;
+    repeated PendingAttestation PreviousEpochAttestations = 31;// [(gogoproto.moretags) = "ssz-max:\"previous_epoch_attestations.max\""];
+    repeated PendingAttestation CurrentEpochAttestations = 32;// [(gogoproto.moretags) = "ssz-max:\"current_epoch_attestations.max\""];
     bytes JustificationBits = 33 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
     Checkpoint PreviousJustifiedCheckpoint = 34;
     Checkpoint CurrentJustifiedCheckpoint = 35;
@@ -31,7 +31,7 @@ message State {
 
     // eth 1
     ETH1Data Eth1Data = 40;
-    repeated ETH1Data Eth1DataVotes = 41;
+    repeated ETH1Data Eth1DataVotes = 41;// [(gogoproto.moretags) = "ssz-max:\"eth1_data_votes.size\""];
     uint64 Eth1DepositIndex = 42;
 
     // network
@@ -75,6 +75,6 @@ message ForkData {
 }
 
 message HistoricalBatch {
-    repeated bytes BlockRoots = 1;
-    repeated bytes StateRoots = 2;
+    repeated bytes BlockRoots = 1;// [(gogoproto.moretags) = "ssz-size:\"block_roots.size\""];
+    repeated bytes StateRoots = 2;// [(gogoproto.moretags) = "ssz-size:\"state_roots.size\""];
 }

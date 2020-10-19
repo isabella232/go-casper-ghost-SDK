@@ -11,14 +11,12 @@ func (st *StateTransition) ProcessSlots(state *core.State, slot uint64) error {
 		if err := processSlot(state); err != nil {
 			return err
 		}
-
 		// Process epoch on the first slot of the next epoch
 		if canProcessEpoch(state) {
 			if err := processEpoch(state); err != nil {
 				return err
 			}
 		}
-
 		state.CurrentSlot ++
 	}
 
@@ -42,6 +40,8 @@ func (st *StateTransition) ProcessSlots(state *core.State, slot uint64) error {
 //    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 func processSlot(state *core.State) error {
+	//start := time.Now()
+
 	// state root
 	stateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
@@ -52,12 +52,18 @@ func processSlot(state *core.State) error {
 	// update latest header
 	state.LatestBlockHeader.StateRoot = stateRoot[:]
 
+	//strot := time.Now()
+	//log.Printf("state root: %f\n", strot.Sub(start).Seconds())
+
 	// add block root
 	root, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		return err
 	}
 	state.BlockRoots[state.CurrentSlot % params.ChainConfig.SlotsPerHistoricalRoot] = root[:]
+
+	//blk := time.Now()
+	//log.Printf("block root: %f\n", blk.Sub(strot).Seconds())
 	return nil
 }
 

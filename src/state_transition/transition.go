@@ -105,7 +105,6 @@ func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core
 	if err := st.ProcessSlots(stateCopy, signedBlock.Block.Slot); err != nil {
 		return [32]byte{}, err
 	}
-
 	if err := st.processBlockForStateRoot(stateCopy, signedBlock); err != nil {
 		return [32]byte{}, err
 	}

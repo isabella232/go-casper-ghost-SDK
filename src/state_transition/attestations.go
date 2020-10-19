@@ -153,6 +153,21 @@ func validateAttestationData(state *core.State, data *core.AttestationData) erro
 
 //    # Check signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+/**
+def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+    """
+    Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
+    """
+    # Verify indices are sorted and unique
+    indices = indexed_attestation.attesting_indices
+    if len(indices) == 0 or not indices == sorted(set(indices)):
+        return False
+    # Verify aggregate signature
+    pubkeys = [state.validators[i].pubkey for i in indices]
+    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
+    signing_root = compute_signing_root(indexed_attestation.data, domain)
+    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+ */
 func validateAttestationSignature(state *core.State, attestation *core.Attestation, slot uint64) error {
 	// reconstruct committee
 	expectedCommittee, err := shared.GetAttestationCommittee(state, attestation.Data.Slot, uint64(attestation.Data.CommitteeIndex))
@@ -181,9 +196,9 @@ func validateAttestationSignature(state *core.State, attestation *core.Attestati
 	}
 
 	// threshold passed
-	if len(expectedCommittee) * 2 > 3 * len(pks) {
-		return fmt.Errorf("attestation did not pass threshold")
-	}
+	//if len(expectedCommittee) * 2 > 3 * len(pks) {
+	//	return fmt.Errorf("attestation did not pass threshold")
+	//}
 
 	// verify
 	sig := &bls.Sign{}
