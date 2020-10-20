@@ -21,6 +21,18 @@ func processEpoch(state *core.State) error {
 	if err := processJustificationAndFinalization(state); err != nil {
 		return err
 	}
+	if err := ProcessRewardsAndPenalties(state); err != nil {
+		return err
+	}
+	if err := ProcessRegistryUpdates(state); err != nil {
+		return err
+	}
+	if err := ProcessSlashings(state); err != nil {
+		return err
+	}
+	if err := ProcessFinalUpdates(state); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -92,6 +104,34 @@ func processJustificationAndFinalization(state *core.State) error {
 	// The 1st/2nd (0b0011) most recent epochs are justified, the 1st using the 2nd as source
 	if justification&0x03 == 0x03 && (oldCurrentJustificationPoint.Epoch+1) == currentEpoch {
 		state.FinalizedCheckpoint = oldCurrentJustificationPoint
+	}
+	return nil
+}
+
+/**
+def process_rewards_and_penalties(state: BeaconState) -> None:
+    # No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
+    if get_current_epoch(state) == GENESIS_EPOCH:
+        return
+
+    rewards, penalties = get_attestation_deltas(state)
+    for index in range(len(state.validators)):
+        increase_balance(state, ValidatorIndex(index), rewards[index])
+        decrease_balance(state, ValidatorIndex(index), penalties[index])
+*/
+func ProcessRewardsAndPenalties(state *core.State) error {
+	if shared.GetCurrentEpoch(state) == params.ChainConfig.GenesisEpoch {
+		return nil
+	}
+
+	rewards, penalties, err := shared.GetAttestationDeltas(state)
+	if err != nil {
+		return err
+	}
+
+	for index := range state.Validators {
+		shared.IncreaseBalance(state, uint64(index), rewards[uint64(index)])
+		shared.DecreaseBalance(state, uint64(index), penalties[uint64(index)])
 	}
 	return nil
 }
@@ -193,14 +233,14 @@ def process_registry_updates(state: BeaconState) -> None:
         validator = state.validators[index]
         validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
 */
-func ProcessRegistryUpdates(state *core.State) {
-	for _, bp := range state.Validators {
+func ProcessRegistryUpdates(state *core.State) error {
+	for index, bp := range state.Validators {
 		if shared.IsEligibleForActivationQueue(bp) {
 			bp.ActivationEligibilityEpoch = shared.GetCurrentEpoch(state) + 1
 		}
 
 		if shared.IsActiveValidator(bp, shared.GetCurrentEpoch(state)) && bp.EffectiveBalance <= params.ChainConfig.EjectionBalance {
-			shared.InitiateValidatorExit(state, bp.Id)
+			shared.InitiateValidatorExit(state, uint64(index))
 		}
 	}
 
@@ -224,6 +264,7 @@ func ProcessRegistryUpdates(state *core.State) {
 		bp := state.Validators[index]
 		bp.ActivationEpoch = shared.ComputeActivationExitEpoch(shared.GetCurrentEpoch(state))
 	}
+	return nil
 }
 
 /**
@@ -238,7 +279,7 @@ def process_slashings(state: BeaconState) -> None:
             penalty = penalty_numerator // total_balance * increment
             decrease_balance(state, ValidatorIndex(index), penalty)
  */
-func ProcessSlashings(state *core.State) {
+func ProcessSlashings(state *core.State) error {
 	epoch := shared.GetCurrentEpoch(state)
 	totalBalance := shared.GetTotalActiveStake(state)
 	adjustedTotalSlashingBalance := mathutil.Min(
@@ -246,14 +287,15 @@ func ProcessSlashings(state *core.State) {
 			totalBalance,
 		)
 
-	for _, bp := range state.Validators {
+	for index, bp := range state.Validators {
 		if bp.Slashed && epoch + params.ChainConfig.EpochsPerSlashingVector / 2 == bp.WithdrawableEpoch {
 			increment := params.ChainConfig.EffectiveBalanceIncrement // Factored out from penalty numerator to avoid uint64 overflow
 			penaltyNumerator := bp.EffectiveBalance / increment * adjustedTotalSlashingBalance
 			penalty := penaltyNumerator / totalBalance * increment
-			shared.DecreaseBalance(state, bp.Id, penalty)
+			shared.DecreaseBalance(state, uint64(index), penalty)
 		}
 	}
+	return nil
 }
 
 /**
@@ -296,12 +338,14 @@ func ProcessFinalUpdates(state *core.State) error {
 	}
 
 	// Update effective balances with hysteresis
-	for _, bp := range state.Validators {
+	for index, bp := range state.Validators {
+		balance := state.Balances[index]
+
 		hysteresisIncrement := params.ChainConfig.EffectiveBalanceIncrement / params.ChainConfig.HysteresisQuotient
 		downwardThreshold := hysteresisIncrement * params.ChainConfig.HysteresisDownwardMultiplier
 		upwardThreshold := hysteresisIncrement * params.ChainConfig.HysteresisUpwardMultiplier
-		if bp.Balance + downwardThreshold < bp.EffectiveBalance || bp.EffectiveBalance + upwardThreshold < bp.Balance {
-			bp.EffectiveBalance = mathutil.Min(bp.Balance - bp.Balance % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
+		if balance + downwardThreshold < bp.EffectiveBalance || bp.EffectiveBalance + upwardThreshold < balance {
+			bp.EffectiveBalance = mathutil.Min(balance - balance % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
 		}
 	}
 

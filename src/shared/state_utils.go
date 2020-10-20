@@ -142,10 +142,8 @@ func CopyState(state *core.State) *core.State {
 
 // will return nil if not found or inactive
 func GetValidator (state *core.State, id uint64) *core.Validator {
-	for _, p := range state.Validators {
-		if p.GetId() == id && p.Active {
-			return p
-		}
+	if id < uint64(len(state.Validators)) {
+		return state.Validators[id]
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package shared
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
@@ -129,9 +130,9 @@ def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[V
  */
 func GetActiveValidators(state *core.State, epoch uint64) []uint64 {
 	var activeBps []uint64
-	for _, val := range state.Validators {
+	for i, val := range state.Validators {
 		if IsActiveValidator(val, epoch) {
-			activeBps = append(activeBps, val.GetId())
+			activeBps = append(activeBps, uint64(i))
 		}
 	}
 	return activeBps
@@ -182,9 +183,7 @@ def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> 
     state.balances[index] += delta
  */
 func IncreaseBalance(state *core.State, index uint64, delta uint64) {
-	if bp := GetValidator(state, index); bp != nil {
-		bp.Balance += delta
-	}
+	state.Balances[index] += delta
 }
 
 /**
@@ -196,10 +195,10 @@ def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> 
 */
 func DecreaseBalance(state *core.State, index uint64, delta uint64) {
 	if bp := GetValidator(state, index); bp != nil {
-		if delta > bp.Balance {
-			bp.Balance = 0
+		if delta > state.Balances[index] {
+			state.Balances[index] = 0
 		} else {
-			bp.Balance -= delta
+			state.Balances[index]  -= delta
 		}
 	}
 }
@@ -313,12 +312,14 @@ func SlashValidator(state *core.State, slashedIndex uint64) error {
 	return nil
 }
 
-func BPByPubkey(state *core.State, pk []byte) *core.Validator {
-	// TODO - BPByPubkey optimize with some kind of map
-	for _, bp := range state.Validators {
+
+// returns error if not found
+func ValidatorByPubkey(state *core.State, pk []byte) (uint64, error) {
+	// TODO - ValidatorByPubkey optimize with some kind of map
+	for i, bp := range state.Validators {
 		if bytes.Equal(pk, bp.PubKey) {
-			return bp
+			return uint64(i), nil
 		}
 	}
-	return nil
+	return 0, fmt.Errorf("validator not found for pk: %s", hex.EncodeToString(pk))
 }

@@ -76,8 +76,8 @@ func processDeposit(state *core.State, deposit *core.Deposit) error {
 
 	pubkey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	bp := shared.BPByPubkey(state, pubkey)
-	if bp == nil {
+	index, err := shared.ValidatorByPubkey(state, pubkey)
+	if err != nil {
 		// Verify the deposit signature (proof of possession) which is not checked by the deposit contract
 		depositMsg := &core.DepositMessage{
 			PublicKey:             deposit.Data.PublicKey,
@@ -100,10 +100,11 @@ func processDeposit(state *core.State, deposit *core.Deposit) error {
 		}
 
 		// Add validator and balance entries
-		state.Validators = append(state.Validators, GetBPFromDeposit(state, deposit))
+		state.Validators = append(state.Validators, GetValidatorFromDeposit(state, deposit))
+		state.Balances = append(state.Balances, amount)
 	} else {
 		// Increase balance by deposit amount
-		shared.IncreaseBalance(state, bp.Id, amount)
+		shared.IncreaseBalance(state, index, amount)
 	}
 
 	return nil
@@ -151,15 +152,13 @@ def get_validator_from_deposit(state: BeaconState, deposit: Deposit) -> Validato
         effective_balance=effective_balance,
     )
  */
-func GetBPFromDeposit(state *core.State, deposit *core.Deposit) *core.Validator {
+func GetValidatorFromDeposit(state *core.State, deposit *core.Deposit) *core.Validator {
 	amount := deposit.Data.Amount
 	effBalance := mathutil.Min(amount - amount % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
 
 	return &core.Validator {
-		Id:                         uint64(len(state.Validators)),
 		PubKey:                     deposit.Data.PublicKey,
 		EffectiveBalance:           effBalance,
-		Balance:                    effBalance,
 		Slashed:                    false,
 		Active:                     true,
 		ExitEpoch:                  params.ChainConfig.FarFutureEpoch,

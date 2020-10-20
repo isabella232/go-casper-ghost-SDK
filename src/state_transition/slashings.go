@@ -82,7 +82,7 @@ func processProposerSlashing(state *core.State, slashing *core.ProposerSlashing)
 			return err
 		}
 		if !res {
-			return fmt.Errorf("proposer slashing: sig not verified for proposer %d", proposer.Id)
+			return fmt.Errorf("proposer slashing: sig not verified for proposer %d", header1.ProposerIndex)
 		}
 	}
 	return nil

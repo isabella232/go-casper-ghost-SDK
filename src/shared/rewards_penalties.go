@@ -99,9 +99,9 @@ def get_eligible_validator_indices(state: BeaconState) -> Sequence[ValidatorInde
 func GetEligibleBpIndices(state *core.State) []uint64 {
 	ret := []uint64{}
 	prevEpoch := GetPreviousEpoch(state)
-	for _, bp := range state.Validators {
+	for i, bp := range state.Validators {
 		if IsActiveValidator(bp, prevEpoch) || (bp.Slashed && prevEpoch + 1 < bp.WithdrawableEpoch) {
-			ret = append(ret, bp.Id)
+			ret = append(ret, uint64(i))
 		}
 	}
 	return ret
@@ -413,34 +413,6 @@ func GetAttestationDeltas(state *core.State) ([]uint64, []uint64, error) {
 	}
 
 	return rewards, penalties, nil
-}
-
-/**
-def process_rewards_and_penalties(state: BeaconState) -> None:
-    # No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
-    if get_current_epoch(state) == GENESIS_EPOCH:
-        return
-
-    rewards, penalties = get_attestation_deltas(state)
-    for index in range(len(state.validators)):
-        increase_balance(state, ValidatorIndex(index), rewards[index])
-        decrease_balance(state, ValidatorIndex(index), penalties[index])
- */
-func ProcessRewardsAndPenalties(state *core.State) error {
-	if GetCurrentEpoch(state) == params.ChainConfig.GenesisEpoch {
-		return nil
-	}
-
-	rewards, penalties, err := GetAttestationDeltas(state)
-	if err != nil {
-		return err
-	}
-
-	for _, bp := range state.Validators {
-		IncreaseBalance(state, bp.Id, rewards[bp.Id])
-		DecreaseBalance(state, bp.Id, penalties[bp.Id])
-	}
-	return nil
 }
 
 func uint64ZeroArray(len uint64) []uint64 {

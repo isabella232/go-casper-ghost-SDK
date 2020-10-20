@@ -36,16 +36,15 @@ message State {
 
     // network
     repeated Validator Validators = 50;
+    repeated uint64 Balances = 51;
 
     // slashings
     repeated uint64 Slashings = 60;
 }
 
 message Validator {
-    uint64 Id = 1; // TODO - spec doesn't have ID but rather their enumerated location
     bytes PubKey = 2;
     uint64 EffectiveBalance = 3; // In ETH
-    uint64 Balance = 4; // TODO - spec doesn't include BP balance
     bool Slashed = 5;
     bool Active = 6; // TODO - spec doesn't include BP active
     uint64 ExitEpoch = 7;

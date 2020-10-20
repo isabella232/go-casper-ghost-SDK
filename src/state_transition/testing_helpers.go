@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/ulule/deepcopier"
 	"log"
+	"time"
 )
 
 func toByte(str string) []byte {
@@ -52,6 +53,8 @@ type StateTestContext struct {
 }
 
 func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, genesisTime uint64) *StateTestContext {
+	start := time.Now()
+
 	var err error
 	if eth1Data == nil {
 		eth1Data, err = defaultEth1Data()
@@ -85,7 +88,7 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 		log.Fatal(err)
 	}
 
-	return &StateTestContext{
+	ret := &StateTestContext{
 		State: &core.State{
 			GenesisTime:                 genesisTime,
 			CurrentSlot:                 0,
@@ -122,6 +125,11 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 			Slashings:                   []uint64{},
 		},
 	}
+
+	end := time.Now()
+	log.Printf("state ctx generate: %f\n", end.Sub(start).Seconds())
+
+	return ret
 }
 
 func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *StateTestContext {
@@ -131,6 +139,8 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 	if err := bls.SetETHmode(bls.EthModeDraft07); err != nil {
 		log.Fatal(err)
 	}
+
+	start := time.Now()
 
 	var leaves [][]byte
 	deposits := make([]*core.Deposit, validatorIndexEnd)
@@ -148,7 +158,7 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 			log.Fatal(err)
 		}
 
-		// inser into the trie
+		// insert into the trie
 		depositData := &core.Deposit_DepositData{
 			PublicKey:             depositMessage.PublicKey,
 			WithdrawalCredentials: depositMessage.WithdrawalCredentials,
@@ -165,6 +175,9 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 		}
 		leaves = append(leaves, root[:])
 	}
+
+	vals := time.Now()
+	log.Printf("create vals: %f\n", vals.Sub(start).Seconds())
 
 	var trie *trieutil.SparseMerkleTrie
 	var err error
@@ -186,7 +199,7 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 	// process
 	for _, deposit := range deposits {
 		// Add validator and balance entries
-		v := GetBPFromDeposit(c.State, deposit)
+		v := GetValidatorFromDeposit(c.State, deposit)
 		v.ActivationEpoch = 0
 		c.State.Validators = append(c.State.Validators, v)
 	}
@@ -197,6 +210,9 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 		log.Fatal(err)
 	}
 	c.State.GenesisValidatorsRoot = genesisValidatorRoot[:]
+
+	depo := time.Now()
+	log.Printf("generate deposits: %f\n", depo.Sub(vals).Seconds())
 
 	return c
 }
@@ -211,8 +227,14 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 	for i := 0 ; i < maxBlocks ; i++ {
 		log.Printf("progressing block %d\n", i)
 
+		start := time.Now()
+
 		// get proposer
 		stateCopy := shared.CopyState(c.State)
+		cpy := time.Now()
+		log.Printf("cpy: %f\n", cpy.Sub(start).Seconds())
+
+
 		// we increment it before we gt proposer as this is what happens in real block processing
 		// in slot > 0 the process slots is called before process block which increments slot by 1
 		if i != 0 {
@@ -244,6 +266,9 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 			log.Fatal(err)
 		}
 
+		pre := time.Now()
+		log.Printf("pre: %f\n", pre.Sub(start).Seconds())
+
 		block := &core.Block{
 			Slot:                 uint64(i),
 			Proposer:             pID,
@@ -255,6 +280,9 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 			},
 		}
 		populateAttestations(c.State, block, uint64(i), justifiedEpoch, finalizedEpoch)
+
+		att := time.Now()
+		log.Printf("att: %f\n", att.Sub(pre).Seconds())
 
 		// process
 		st := NewStateTransition()
@@ -269,6 +297,9 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		}
 		block.StateRoot = root[:]
 
+		compu := time.Now()
+		log.Printf("compu: %f\n", compu.Sub(att).Seconds())
+
 		// sign
 		blockDomain, err := shared.GetDomain(c.State, params.ChainConfig.DomainBeaconProposer, shared.GetCurrentEpoch(c.State))
 		if err != nil {
@@ -279,6 +310,9 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 			log.Fatal(err)
 		}
 
+		sign := time.Now()
+		log.Printf("sign: %f\n", sign.Sub(compu).Seconds())
+
 		// execute
 		c.State, err = st.ExecuteStateTransition(c.State, &core.SignedBlock{
 			Block:                block,
@@ -287,6 +321,9 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		exe := time.Now()
+		log.Printf("exe: %f\n", exe.Sub(sign).Seconds())
 
 		// copy to previousBlockRoot
 		previousBlockHeader = &core.BlockHeader{}
@@ -343,9 +380,8 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 		aggBits := make(bitfield.Bitlist, len(indices)) // for bytes
 		signed := uint64(0)
 		for aggIndex, index := range indices {
-			bp := shared.GetValidator(state, index)
 			sk := &bls.SecretKey{}
-			sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", bp.Id))))
+			sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", index))))
 
 			// sign
 			if aggregatedSig == nil {
