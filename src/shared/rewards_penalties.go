@@ -2,8 +2,9 @@ package shared
 
 import (
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
 )
 
 /**
@@ -53,7 +54,7 @@ func GetBaseReward(state *core.State, index uint64) (uint64, error) {
 	totalBalance := GetTotalActiveStake(state)
 	if bp := GetValidator(state, index); bp != nil {
 		effectiveBalance := bp.EffectiveBalance
-		return effectiveBalance * params.ChainConfig.BaseRewardFactor / IntegerSquareRoot(totalBalance), nil
+		return effectiveBalance * params.ChainConfig.BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance), nil
 	} else {
 		return 0, fmt.Errorf("could not find BP %d", index)
 	}
@@ -98,9 +99,9 @@ def get_eligible_validator_indices(state: BeaconState) -> Sequence[ValidatorInde
 func GetEligibleBpIndices(state *core.State) []uint64 {
 	ret := []uint64{}
 	prevEpoch := GetPreviousEpoch(state)
-	for _, bp := range state.Validators {
-		if IsActiveBP(bp, prevEpoch) || (bp.Slashed && prevEpoch + 1 < bp.WithdrawableEpoch) {
-			ret = append(ret, bp.Id)
+	for i, bp := range state.Validators {
+		if IsActiveValidator(bp, prevEpoch) || (bp.Slashed && prevEpoch + 1 < bp.WithdrawableEpoch) {
+			ret = append(ret, uint64(i))
 		}
 	}
 	return ret
@@ -412,34 +413,6 @@ func GetAttestationDeltas(state *core.State) ([]uint64, []uint64, error) {
 	}
 
 	return rewards, penalties, nil
-}
-
-/**
-def process_rewards_and_penalties(state: BeaconState) -> None:
-    # No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
-    if get_current_epoch(state) == GENESIS_EPOCH:
-        return
-
-    rewards, penalties = get_attestation_deltas(state)
-    for index in range(len(state.validators)):
-        increase_balance(state, ValidatorIndex(index), rewards[index])
-        decrease_balance(state, ValidatorIndex(index), penalties[index])
- */
-func ProcessRewardsAndPenalties(state *core.State) error {
-	if GetCurrentEpoch(state) == params.ChainConfig.GenesisEpoch {
-		return nil
-	}
-
-	rewards, penalties, err := GetAttestationDeltas(state)
-	if err != nil {
-		return err
-	}
-
-	for _, bp := range state.Validators {
-		IncreaseBalance(state, bp.Id, rewards[bp.Id])
-		DecreaseBalance(state, bp.Id, penalties[bp.Id])
-	}
-	return nil
 }
 
 func uint64ZeroArray(len uint64) []uint64 {

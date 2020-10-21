@@ -2,13 +2,24 @@ package state_transition
 
 import (
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 )
 
 func ProcessDeposits(state *core.State, deposits []*core.Deposit) error {
+	if deposits == nil {
+		return nil // no deposits
+	}
+
+	// Verify that outstanding deposits are processed up to the maximum number of deposits
+	if uint64(len(deposits)) != mathutil.Min(params.ChainConfig.MaxDeposits, state.Eth1Data.DepositCount - state.Eth1DepositIndex) {
+		return fmt.Errorf("number of deposits in body invalid")
+	}
+
 	for _, deposit := range deposits {
 		if err := processDeposit(state, deposit); err != nil {
 			return err
@@ -65,8 +76,8 @@ func processDeposit(state *core.State, deposit *core.Deposit) error {
 
 	pubkey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	bp := shared.BPByPubkey(state, pubkey)
-	if bp == nil {
+	index, err := shared.ValidatorIndexByPubkey(state, pubkey)
+	if err != nil {
 		// Verify the deposit signature (proof of possession) which is not checked by the deposit contract
 		depositMsg := &core.DepositMessage{
 			PublicKey:             deposit.Data.PublicKey,
@@ -89,10 +100,11 @@ func processDeposit(state *core.State, deposit *core.Deposit) error {
 		}
 
 		// Add validator and balance entries
-		state.Validators = append(state.Validators, GetBPFromDeposit(state, deposit))
+		state.Validators = append(state.Validators, GetValidatorFromDeposit(state, deposit))
+		state.Balances = append(state.Balances, amount)
 	} else {
 		// Increase balance by deposit amount
-		shared.IncreaseBalance(state, bp.Id, amount)
+		shared.IncreaseBalance(state, index, amount)
 	}
 
 	return nil
@@ -112,7 +124,8 @@ func verifyDeposit(state *core.State, deposit *core.Deposit) error {
 	if err != nil {
 		return fmt.Errorf("could not tree hash deposit data")
 	}
-	if ok := shared.VerifyMerkleBranch(
+
+	if ok := trieutil.VerifyMerkleBranch(
 			receiptRoot,
 			leaf[:],
 			int(state.Eth1DepositIndex),
@@ -139,21 +152,19 @@ def get_validator_from_deposit(state: BeaconState, deposit: Deposit) -> Validato
         effective_balance=effective_balance,
     )
  */
-func GetBPFromDeposit(state *core.State, deposit *core.Deposit) *core.Validator {
+func GetValidatorFromDeposit(state *core.State, deposit *core.Deposit) *core.Validator {
 	amount := deposit.Data.Amount
-	effBalance := shared.Min(amount - amount % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
+	effBalance := mathutil.Min(amount - amount % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
 
 	return &core.Validator {
-		Id:                         uint64(len(state.Validators)),
 		PubKey:                     deposit.Data.PublicKey,
 		EffectiveBalance:           effBalance,
-		Balance:                    effBalance,
 		Slashed:                    false,
 		Active:                     true,
 		ExitEpoch:                  params.ChainConfig.FarFutureEpoch,
 		ActivationEpoch:            params.ChainConfig.FarFutureEpoch,
 		ActivationEligibilityEpoch: params.ChainConfig.FarFutureEpoch,
 		WithdrawableEpoch:          params.ChainConfig.FarFutureEpoch,
-		WithdrawalCredentials: deposit.Data.WithdrawalCredentials,
+		WithdrawalCredentials: 		deposit.Data.WithdrawalCredentials,
 	}
 }

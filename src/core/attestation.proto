@@ -1,12 +1,12 @@
 syntax = "proto3";
-package state;
+package core;
 
 option go_package = ".;core";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message PendingAttestation {
-  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-size:\"?\" ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   AttestationData data = 2;
   uint64 InclusionDelay = 3;
   uint64 ProposerIndex = 4;
@@ -17,7 +17,7 @@ message Attestation {
   // the same vote and have been aggregated into this attestation.
   bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   AttestationData data = 2;
-  bytes signature = 3; // 96 byte BLS aggregate signature.
+  bytes signature = 3 [(gogoproto.moretags) = "ssz-size:\"96\""]; // 96 byte BLS aggregate signature.
 }
 
 message AttestationData {
@@ -26,7 +26,7 @@ message AttestationData {
   // The committee index that submitted this attestation.
   uint64 committee_index = 2;
   // 32 byte root of the LMD GHOST block vote.
-  bytes beacon_block_root = 3;
+  bytes beacon_block_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
   // The most recent justified checkpoint in the beacon state
   Checkpoint source = 4;
   // The checkpoint attempting to be justified for the current epoch and its epoch boundary block
@@ -48,5 +48,5 @@ message Checkpoint {
   // Epoch the checkpoint references.
   uint64 epoch = 1;
   // Block root of the checkpoint references.
-  bytes root = 2;
+  bytes root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }

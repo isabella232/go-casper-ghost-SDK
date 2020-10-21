@@ -2,9 +2,13 @@ package shared
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/hashutil"
+	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"github.com/wealdtech/go-bytesutil"
 )
 
 /**
@@ -14,7 +18,7 @@ import (
 		"""
 		return validator.activation_epoch <= epoch < validator.exit_epoch
  */
-func IsActiveBP(bp *core.Validator, epoch uint64) bool {
+func IsActiveValidator(bp *core.Validator, epoch uint64) bool {
 	return bp.ActivationEpoch <= epoch && epoch < bp.ExitEpoch
 }
 
@@ -81,18 +85,18 @@ func ComputeProposerIndex(state *core.State, indices []uint64, seed []byte) (uin
 	if len(indices) == 0 {
 		return 0, fmt.Errorf("couldn't compute proposer, indices list empty")
 	}
-	maxRandomByte := uint64(2^8-1)
+	maxRandomByte := uint64(1<<8-1)
 	i := uint64(0)
 	total := uint64(len(indices))
 	for {
-		idx, err := computeShuffledIndex(i % total, total, SliceToByte32(seed), true,10) // TODO - shuffle round via config
+		idx, err := computeShuffledIndex(i % total, total, bytesutil.ToBytes32(seed), true,params.ChainConfig.ShuffleRoundCount) // TODO - shuffle round via config
 		if err != nil {
 			return 0, err
 		}
 
 		candidateIndex := indices[idx]
-		b := append(seed[:], Bytes8(i / 32)...)
-		randomByte := Hash(b)[i%32]
+		b := append(seed[:], bytesutil.Bytes8(i / 32)...)
+		randomByte := hashutil.Hash(b)[i%32]
 
 		bp := GetValidator(state, candidateIndex)
 		if bp == nil {
@@ -126,9 +130,9 @@ def get_active_validator_indices(state: BeaconState, epoch: Epoch) -> Sequence[V
  */
 func GetActiveValidators(state *core.State, epoch uint64) []uint64 {
 	var activeBps []uint64
-	for _, bp := range state.Validators {
-		if IsActiveBP(bp, epoch) {
-			activeBps = append(activeBps, bp.GetId())
+	for i, val := range state.Validators {
+		if IsActiveValidator(val, epoch) {
+			activeBps = append(activeBps, uint64(i))
 		}
 	}
 	return activeBps
@@ -164,11 +168,11 @@ def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndex:
 func GetBlockProposerIndex(state *core.State) (uint64, error) {
 	epoch := GetCurrentEpoch(state)
 	seed := GetSeed(state, epoch, params.ChainConfig.DomainBeaconProposer)
-	SeedWithSlot := append(seed[:], Bytes8(state.CurrentSlot)...)
-	hash := Hash(SeedWithSlot)
+	SeedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot)...)
+	hash := hashutil.Hash(SeedWithSlot)
 
-	bps := GetActiveValidators(state, epoch)
-	return ComputeProposerIndex(state, bps, hash[:])
+	validators := GetActiveValidators(state, epoch)
+	return ComputeProposerIndex(state, validators, hash[:])
 }
 
 /**
@@ -179,9 +183,7 @@ def increase_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> 
     state.balances[index] += delta
  */
 func IncreaseBalance(state *core.State, index uint64, delta uint64) {
-	if bp := GetValidator(state, index); bp != nil {
-		bp.Balance += delta
-	}
+	state.Balances[index] += delta
 }
 
 /**
@@ -193,10 +195,10 @@ def decrease_balance(state: BeaconState, index: ValidatorIndex, delta: Gwei) -> 
 */
 func DecreaseBalance(state *core.State, index uint64, delta uint64) {
 	if bp := GetValidator(state, index); bp != nil {
-		if delta > bp.Balance {
-			bp.Balance = 0
+		if delta > state.Balances[index] {
+			state.Balances[index] = 0
 		} else {
-			bp.Balance -= delta
+			state.Balances[index]  -= delta
 		}
 	}
 }
@@ -293,7 +295,7 @@ func SlashValidator(state *core.State, slashedIndex uint64) error {
 		return fmt.Errorf("slash BP: block producer not found")
 	}
 	bp.Slashed = true
-	bp.WithdrawableEpoch = Max(bp.WithdrawableEpoch, epoch + params.ChainConfig.EpochsPerSlashingVector)
+	bp.WithdrawableEpoch = mathutil.Max(bp.WithdrawableEpoch, epoch + params.ChainConfig.EpochsPerSlashingVector)
 	state.Slashings[epoch % params.ChainConfig.EpochsPerSlashingVector] += bp.EffectiveBalance
 	DecreaseBalance(state, slashedIndex, bp.EffectiveBalance / params.ChainConfig.MinSlashingPenaltyQuotient)
 
@@ -310,12 +312,14 @@ func SlashValidator(state *core.State, slashedIndex uint64) error {
 	return nil
 }
 
-func BPByPubkey(state *core.State, pk []byte) *core.Validator {
-	// TODO - BPByPubkey optimize with some kind of map
-	for _, bp := range state.Validators {
+
+// returns error if not found
+func ValidatorIndexByPubkey(state *core.State, pk []byte) (uint64, error) {
+	// TODO - ValidatorIndexByPubkey optimize with some kind of map
+	for i, bp := range state.Validators {
 		if bytes.Equal(pk, bp.PubKey) {
-			return bp
+			return uint64(i), nil
 		}
 	}
-	return nil
+	return 0, fmt.Errorf("validator not found for pk: %s", hex.EncodeToString(pk))
 }

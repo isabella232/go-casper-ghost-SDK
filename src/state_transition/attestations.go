@@ -2,11 +2,10 @@ package state_transition
 
 import (
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/herumi/bls-eth-go-binary/bls"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 func ProcessBlockAttestations(state *core.State, attestations []*core.Attestation) error {
@@ -92,11 +91,11 @@ func appendPendingAttestation(state *core.State, attestation *core.Attestation) 
 	pendingAtt := &core.PendingAttestation{
 		AggregationBits:      attestation.AggregationBits,
 		Data:                 attestation.Data,
-		InclusionDelay:       state.CurrentSlot - attestation.Data.Slot,
+		InclusionDelay:       state.Slot - attestation.Data.Slot,
 		ProposerIndex:        proposer,
 	}
 
-	if attestation.Data.Target.Epoch == shared.ComputeEpochAtSlot(state.CurrentSlot) {
+	if attestation.Data.Target.Epoch == shared.ComputeEpochAtSlot(state.Slot) {
 		if !core.CheckpointsEqual(attestation.Data.Source, state.CurrentJustifiedCheckpoint) {
 			return fmt.Errorf("source doesn't equal current justified checkpoint")
 		}
@@ -137,10 +136,10 @@ func validateAttestationData(state *core.State, data *core.AttestationData) erro
 		return fmt.Errorf("target slot not in the correct epoch")
 	}
 
-	if data.Slot + params.ChainConfig.MinAttestationInclusionDelay > state.CurrentSlot {
+	if data.Slot + params.ChainConfig.MinAttestationInclusionDelay > state.Slot {
 		return fmt.Errorf("min att. inclusion delay did not pass")
 	}
-	if state.CurrentSlot > data.Slot + params.ChainConfig.SlotsInEpoch {
+	if state.Slot > data.Slot + params.ChainConfig.SlotsInEpoch {
 		return fmt.Errorf("slot to submit att. has passed")
 	}
 
@@ -153,6 +152,21 @@ func validateAttestationData(state *core.State, data *core.AttestationData) erro
 
 //    # Check signature
 //    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+/**
+def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: IndexedAttestation) -> bool:
+    """
+    Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
+    """
+    # Verify indices are sorted and unique
+    indices = indexed_attestation.attesting_indices
+    if len(indices) == 0 or not indices == sorted(set(indices)):
+        return False
+    # Verify aggregate signature
+    pubkeys = [state.validators[i].pubkey for i in indices]
+    domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
+    signing_root = compute_signing_root(indexed_attestation.data, domain)
+    return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+ */
 func validateAttestationSignature(state *core.State, attestation *core.Attestation, slot uint64) error {
 	// reconstruct committee
 	expectedCommittee, err := shared.GetAttestationCommittee(state, attestation.Data.Slot, uint64(attestation.Data.CommitteeIndex))
@@ -181,9 +195,9 @@ func validateAttestationSignature(state *core.State, attestation *core.Attestati
 	}
 
 	// threshold passed
-	if len(expectedCommittee) * 2 > 3 * len(pks) {
-		return fmt.Errorf("attestation did not pass threshold")
-	}
+	//if len(expectedCommittee) * 2 > 3 * len(pks) {
+	//	return fmt.Errorf("attestation did not pass threshold")
+	//}
 
 	// verify
 	sig := &bls.Sign{}
@@ -191,7 +205,7 @@ func validateAttestationSignature(state *core.State, attestation *core.Attestati
 	if err != nil {
 		return err
 	}
-	root, err := ssz.HashTreeRoot(attestation.Data)
+	root, err := attestation.Data.HashTreeRoot()
 	if err != nil {
 		return err
 	}

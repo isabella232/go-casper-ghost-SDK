@@ -3,10 +3,11 @@ package shared
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-ssz"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func SignBlock(block *core.Block, sk []byte, domain []byte) (*bls.Sign, error) {
@@ -184,10 +185,11 @@ def compute_fork_data_root(current_version: Version, genesis_validators_root: Ro
     ))
  */
 func ComputeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
-	return ssz.HashTreeRoot(&core.ForkData{
+	ret := &core.ForkData{
 		CurrentVersion:       version,
 		GenesisValidatorRoot: root,
-	})
+	}
+	return ret.HashTreeRoot()
 }
 
 /**
@@ -204,7 +206,7 @@ func ComputeForkDigest(version []byte, root []byte) ([4]byte, error) {
 	if err != nil {
 		return [4]byte{}, err
 	}
-	return ToBytes4(dataRoot[:]), nil
+	return bytesutil.ToBytes4(dataRoot[:]), nil
 }
 
 /**

@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
-	"github.com/prysmaticlabs/go-ssz"
-	"log"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 )
 
 type IStateTransition interface {
@@ -78,7 +76,6 @@ type StateTransition struct {}
 func NewStateTransition() *StateTransition { return &StateTransition{} }
 
 func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock *core.SignedBlock) (newState *core.State, err error) {
-	log.Printf("processing block at slot %d\n", signedBlock.Block.Slot)
 	newState = shared.CopyState(state)
 
 	if err := st.ProcessSlots(newState, signedBlock.Block.Slot); err != nil {
@@ -89,12 +86,12 @@ func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock 
 		return nil, err
 	}
 
-	postStateRoot, err := ssz.HashTreeRoot(newState)
+	postStateRoot, err := newState.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	if !bytes.Equal(signedBlock.Block.StateRoot, postStateRoot[:]) {
-		return nil, fmt.Errorf("new block state root is wrong, expected %s", hex.EncodeToString(postStateRoot[:]))
+		return nil, fmt.Errorf("state transition: new block state root is wrong, expected %s", hex.EncodeToString(postStateRoot[:]))
 	}
 
 	return newState, nil
@@ -107,12 +104,11 @@ func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core
 	if err := st.ProcessSlots(stateCopy, signedBlock.Block.Slot); err != nil {
 		return [32]byte{}, err
 	}
-
 	if err := st.processBlockForStateRoot(stateCopy, signedBlock); err != nil {
 		return [32]byte{}, err
 	}
 
-	return ssz.HashTreeRoot(stateCopy)
+	return stateCopy.HashTreeRoot()
 }
 
 
@@ -127,9 +123,9 @@ func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core
 //		return []byte{}, err
 //	}
 //
-//	root := shared.GetStateRoot(newState, newState.CurrentSlot)
+//	root := shared.GetStateRoot(newState, newState.Slot)
 //	if len(root) == 0 {
-//		return []byte{}, fmt.Errorf("could not find statet root for epoch %d", newState.CurrentSlot)
+//		return []byte{}, fmt.Errorf("could not find statet root for epoch %d", newState.Slot)
 //	}
 //
 //	return root[:], nil

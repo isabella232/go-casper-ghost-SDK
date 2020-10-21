@@ -3,15 +3,16 @@ package state_transition
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/go-ssz"
-	"github.com/stretchr/testify/require"
+	"github.com/prysmaticlabs/prysm/shared/trieutil"
 	"github.com/ulule/deepcopier"
-	"testing"
+	"log"
+	"time"
 )
 
 func toByte(str string) []byte {
@@ -19,212 +20,265 @@ func toByte(str string) []byte {
 	return ret
 }
 
-func generateAttestations(
-	state *core.State,
-	howManyBpSig uint64,
-	slot uint64,
-	sourceCheckpoint *core.Checkpoint,
-	targetCheckpoint *core.Checkpoint,
-	committeeIdx uint64,
-	finalized bool,
-	dutyType int32, // 0 - attestation, 1 - proposal, 2 - aggregation
-	) []*core.Attestation {
-
-	data := &core.AttestationData{
-		Slot:                 slot,
-		CommitteeIndex:       committeeIdx,
-		BeaconBlockRoot:      []byte("block root"),
-		Source:               sourceCheckpoint,
-		Target:               targetCheckpoint,
-	}
-
-	// sign
-	root, err := ssz.HashTreeRoot(data)
+func defaultEth1Data() (*core.ETH1Data, error) {
+	trie, err := trieutil.NewTrie(int(params.ChainConfig.DepositContractTreeDepth))
 	if err != nil {
-		return nil
+		return nil, err
 	}
+	depositRoot := trie.Root()
 
-	expectedCommittee, err := shared.GetAttestationCommittee(state, data.Slot, uint64(data.CommitteeIndex))
-	if err != nil {
-		return nil
-	}
-
-	var aggregatedSig *bls.Sign
-	aggBits := make(bitfield.Bitlist, len(expectedCommittee)) // for bytes
-	signed := uint64(0)
-	for i, bpId := range expectedCommittee {
-		bp := shared.GetValidator(state, bpId)
-		sk := &bls.SecretKey{}
-		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", bp.Id))))
-
-		// sign
-		if aggregatedSig == nil {
-			aggregatedSig = sk.SignByte(root[:])
-		} else {
-			aggregatedSig.Add(sk.SignByte(root[:]))
-		}
-		aggBits.SetBitAt(uint64(i), true)
-		signed ++
-
-		if signed >= howManyBpSig {
-			break
-		}
-	}
-
-	return []*core.Attestation{
-		{
-			Data:            data,
-			Signature:       aggregatedSig.Serialize(),
-			AggregationBits: aggBits,
-		},
-	}
+	return &core.ETH1Data{
+		DepositRoot:          depositRoot[:],
+		DepositCount:         0,
+		BlockHash:            toByte("8049cb6db44dc94a52a9702779c0b4d5d77164bc56a913da1203563de5193405"),
+	}, nil
 }
 
-func generateTestState(t *testing.T, headSlot int) *core.State {
-	require.NoError(t, bls.Init(bls.BLS12_381))
-	require.NoError(t, bls.SetETHmode(bls.EthModeDraft07))
+func initBlockHeader() (*core.BlockHeader, error) {
+	root, err := ssz.HashTreeRoot(&core.BlockBody{})
+	if err != nil {
+		return nil, err
+	}
+	return &core.BlockHeader{
+		Slot:                 0,
+		ProposerIndex:        0,
+		ParentRoot:           params.ChainConfig.ZeroHash,
+		StateRoot:            params.ChainConfig.ZeroHash,
+		BodyRoot:             root[:],
+	}, nil
+}
 
-	// block producers
-	bps := make([]*core.Validator, 124)
-	for i := 0 ; i < len(bps) ; i++ {
-		sk := &bls.SecretKey{}
-		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
+type StateTestContext struct {
+	State *core.State
+}
 
-		bps[i] = &core.Validator {
-			Id:      uint64(i),
-			EffectiveBalance:   32,
-			Balance : 32,
-			Slashed: false,
-			Active:  true,
-			PubKey:  sk.GetPublicKey().Serialize(),
+func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, genesisTime uint64) *StateTestContext {
+	start := time.Now()
+
+	var err error
+	if eth1Data == nil {
+		eth1Data, err = defaultEth1Data()
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 
-	// vaults (pool)
-	//for i := 0 ; i < len(pools) ; i++ {
-	//	executors := make([]uint64, params.ChainConfig.VaultSize)
-	//	for j := 0 ; j < int(params.ChainConfig.VaultSize) ; j++ {
-	//		executors[j] = bps[i*int(params.ChainConfig.VaultSize) + j].GetId()
-	//	} // no need to sort as they are already
-	//
-	//	sk := &bls.SecretKey{}
-	//	sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
-	//
-	//	pools[i] = &core.Pool{
-	//		Id:              uint64(i),
-	//		SortedCommittee: executors,
-	//		PubKey:          sk.GetPublicKey().Serialize(),
-	//		Active:true,
-	//	}
-	//}
-	ret := &core.State {
-		CurrentSlot: 0,
-		Validators:  bps,
-		RandaoMix:          	   make([][]byte, params.ChainConfig.EpochsPerHistoricalVector),
-		BlockRoots:                make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot),
-		StateRoots:                make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot),
-		PreviousEpochAttestations: []*core.PendingAttestation{},
-		CurrentEpochAttestations:  []*core.PendingAttestation{},
-		JustificationBits:         []byte{0},
-		PreviousJustifiedCheckpoint: &core.Checkpoint{
-			Epoch:                0,
-			Root:                 params.ChainConfig.ZeroHash, // TODO is it zero hash?
-		},
-		CurrentJustifiedCheckpoint: &core.Checkpoint{
-			Epoch:                0,
-			Root:                 params.ChainConfig.ZeroHash, // TODO is it zero hash?
+	initBlockHeader, err := initBlockHeader()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	randaoMixes := make([][]byte, params.ChainConfig.EpochsPerHistoricalVector)
+	for i := range randaoMixes {
+		randaoMixes[i] = eth1Data.BlockHash
+	}
+
+	blockRoots := make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot)
+	for i := range blockRoots {
+		blockRoots[i] = params.ChainConfig.ZeroHash
+	}
+
+	stateRoots := make([][]byte, params.ChainConfig.SlotsPerHistoricalRoot)
+	for i := range stateRoots {
+		stateRoots[i] = params.ChainConfig.ZeroHash
+	}
+
+	genesisValidatorRoot, err := ssz.HashTreeRoot([]*core.Validator{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ret := &StateTestContext{
+		State: &core.State{
+			GenesisTime:       genesisTime,
+			Slot:              0,
+			LatestBlockHeader: initBlockHeader,
+			Fork:                        &core.Fork{
+				PreviousVersion:      config.GenesisForkVersion,
+				CurrentVersion:       config.GenesisForkVersion,
+				Epoch:                config.GenesisEpoch,
+			},
+			BlockRoots:                blockRoots,
+			StateRoots:                stateRoots,
+			RandaoMix:                 randaoMixes,
+			HistoricalRoots:           [][]byte{},
+			GenesisValidatorsRoot:     genesisValidatorRoot[:],
+			PreviousEpochAttestations: []*core.PendingAttestation{},
+			CurrentEpochAttestations:  []*core.PendingAttestation{},
+			JustificationBits:         []byte{0},
+			PreviousJustifiedCheckpoint: &core.Checkpoint{
+				Epoch:                0,
+				Root:                 params.ChainConfig.ZeroHash,
+			},
+			CurrentJustifiedCheckpoint:  &core.Checkpoint{
+				Epoch:                0,
+				Root:                 params.ChainConfig.ZeroHash,
+			},
+			FinalizedCheckpoint:         &core.Checkpoint{
+				Epoch:                0,
+				Root:                 params.ChainConfig.ZeroHash,
+			},
+			Eth1Data:                    eth1Data,
+			Eth1DataVotes:               []*core.ETH1Data{},
+			Eth1DepositIndex:            0,
+			Validators:                  []*core.Validator{},
+			Balances: 					 []uint64{},
+			Slashings:                   []uint64{},
 		},
 	}
 
-	ret, err := generateAndApplyBlocks(ret, headSlot)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return nil
-	}
+	end := time.Now()
+	log.Printf("state ctx generate: %f\n", end.Sub(start).Seconds())
 
 	return ret
 }
 
-// will populate the prev and current pending attestations for processing
-func populateJustificationAndFinalization(
-		state *core.State,
-		epoch uint64,
-		endSlot uint64, // end slot for attestations
-		participationRate float64,
-		targetCheckpoint *core.Checkpoint,
-	) error {
+func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *StateTestContext {
+	if err := bls.Init(bls.BLS12_381); err != nil {
+		log.Fatal(err)
+	}
+	if err := bls.SetETHmode(bls.EthModeDraft07); err != nil {
+		log.Fatal(err)
+	}
 
-	slotPointer := epoch * params.ChainConfig.SlotsInEpoch // points at first slot
-	pendingAttArray := make([]*core.PendingAttestation, 0)
-	setPendingAttArray := func(att []*core.PendingAttestation) {
-		if epoch == shared.GetCurrentEpoch(state) {
-			state.CurrentEpochAttestations = att
-		} else {
-			state.PreviousEpochAttestations = att
+	start := time.Now()
+
+	var leaves [][]byte
+	deposits := make([]*core.Deposit, validatorIndexEnd)
+	for i := uint64(0) ; i < validatorIndexEnd ; i++ {
+		sk := &bls.SecretKey{}
+		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
+
+		cred, err := ssz.HashTreeRoot([]byte("test_withdrawal_cred"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		depositMessage := &core.DepositMessage{
+			PublicKey:             sk.GetPublicKey().Serialize(),
+			WithdrawalCredentials: cred[:],
+			Amount:                32 * 1e9, // gwei
+		}
+		root, err := ssz.HashTreeRoot(depositMessage)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// insert into the trie
+		depositData := &core.Deposit_DepositData{
+			PublicKey:             depositMessage.PublicKey,
+			WithdrawalCredentials: depositMessage.WithdrawalCredentials,
+			Amount:                depositMessage.Amount,
+			Signature:             sk.SignByte(root[:]).Serialize(),
+		}
+		deposits[i] = &core.Deposit{
+			Proof:                nil,
+			Data:                 depositData,
+		}
+		root, err = ssz.HashTreeRoot(depositData)
+		if err != nil {
+			log.Fatal(err)
+		}
+		leaves = append(leaves, root[:])
+	}
+
+	vals := time.Now()
+	log.Printf("create vals: %f\n", vals.Sub(start).Seconds())
+
+	var trie *trieutil.SparseMerkleTrie
+	var err error
+	if len(leaves) > 0 {
+		trie, err = trieutil.GenerateTrieFromItems(leaves, int(params.ChainConfig.DepositContractTreeDepth))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		trie, err = trieutil.NewTrie(int(params.ChainConfig.DepositContractTreeDepth))
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 
-	for slotPointer <= endSlot {
+	depositRoot := trie.Root()
+	c.State.Eth1Data.DepositRoot = depositRoot[:]
 
-		for cIndx := uint64(0) ; cIndx < shared.GetCommitteeCountPerSlot(state, slotPointer) ; cIndx ++ {
-			committee, err := shared.GetAttestationCommittee(state, slotPointer, cIndx)
-			if err != nil {
-				return err
-			}
-			targetParticipation := uint64(float64(len(committee)) * participationRate)
-
-			aggBits := make(bitfield.Bitlist, params.ChainConfig.MaxAttestationCommitteeSize)
-			for i := uint64(0); i < targetParticipation; i ++ {
-				aggBits.SetBitAt(i, true)
-			}
-
-			pendingAttArray = append(pendingAttArray, &core.PendingAttestation{
-				AggregationBits:      aggBits,
-				Data:                 &core.AttestationData{
-					Slot:                 slotPointer,
-					CommitteeIndex:       cIndx,
-					Target:               targetCheckpoint,
-				},
-			})
-		}
-		slotPointer ++
+	// process
+	for _, deposit := range deposits {
+		// Add validator and balance entries
+		v := GetValidatorFromDeposit(c.State, deposit)
+		v.ActivationEpoch = 0
+		c.State.Validators = append(c.State.Validators, v)
+		c.State.Balances = append(c.State.Balances, deposit.Data.Amount)
 	}
 
-	setPendingAttArray(pendingAttArray)
+	// update genesis root
+	genesisValidatorRoot, err := ssz.HashTreeRoot(c.State.Validators)
+	if err != nil {
+		log.Fatal(err)
+	}
+	c.State.GenesisValidatorsRoot = genesisValidatorRoot[:]
 
-	return nil
+	depo := time.Now()
+	log.Printf("generate deposits: %f\n", depo.Sub(vals).Seconds())
+
+	return c
 }
 
 // will generate and save blocks from slot 0 until maxBlocks
-func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, error) {
+func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch uint64, finalizedEpoch uint64) *StateTestContext {
 	var previousBlockHeader *core.BlockHeader
+	previousBlockHeader, err := initBlockHeader()
+	if err != nil {
+		log.Fatal(err)
+	}
 	for i := 0 ; i < maxBlocks ; i++ {
+		log.Printf("progressing block %d\n", i)
+
+		start := time.Now()
+
 		// get proposer
-		pID, err := shared.GetBlockProposerIndex(state)
+		stateCopy := shared.CopyState(c.State)
+		cpy := time.Now()
+		log.Printf("cpy: %f\n", cpy.Sub(start).Seconds())
+
+
+		// we increment it before we gt proposer as this is what happens in real block processing
+		// in slot > 0 the process slots is called before process block which increments slot by 1
+		if i != 0 {
+			stateCopy.Slot++
+		}
+		pID, err := shared.GetBlockProposerIndex(stateCopy)
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 		sk := []byte(fmt.Sprintf("%d", pID))
 
-		// state root
-		stateRoot,err := ssz.HashTreeRoot(state)
+		// randao
+		randaoReveal, err := signRandao(c.State, sk)
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 
 		// parent
-		if previousBlockHeader != nil {
+		// replicates what the next process slot does
+		if i != 0 {
+			stateRoot,err := ssz.HashTreeRoot(c.State)
+			if err != nil {
+				log.Fatal(err)
+			}
 			previousBlockHeader.StateRoot =  stateRoot[:]
 		}
 		parentRoot,err := ssz.HashTreeRoot(previousBlockHeader)
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 
-		// randao
-		randaoReveal, err := signRandao(state, sk)
+		pre := time.Now()
+		log.Printf("pre: %f\n", pre.Sub(start).Seconds())
+
+		eth1Vote, err := defaultEth1Data() // TODO - block eth1 vote dynamic?
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 
 		block := &core.Block{
@@ -235,53 +289,148 @@ func generateAndApplyBlocks(state *core.State, maxBlocks int) (*core.State, erro
 			Body:                 &core.BlockBody{
 				RandaoReveal:         randaoReveal.Serialize(),
 				Attestations:         []*core.Attestation{},
+				Eth1Data: 			  eth1Vote,
 			},
 		}
+		populateAttestations(c.State, block, uint64(i), justifiedEpoch, finalizedEpoch)
+
+		att := time.Now()
+		log.Printf("att: %f\n", att.Sub(pre).Seconds())
 
 		// process
 		st := NewStateTransition()
 
 		// compute state root
-		root, err := st.ComputeStateRoot(state, &core.SignedBlock{
+		root, err := st.ComputeStateRoot(c.State, &core.SignedBlock{
 			Block:                block,
 			Signature:            []byte{},
 		})
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 		block.StateRoot = root[:]
 
+		compu := time.Now()
+		log.Printf("compu: %f\n", compu.Sub(att).Seconds())
+
 		// sign
-		blockDomain, err := shared.GetDomain(state, params.ChainConfig.DomainBeaconProposer, 0)
+		blockDomain, err := shared.GetDomain(c.State, params.ChainConfig.DomainBeaconProposer, shared.GetCurrentEpoch(c.State))
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 		sig, err := shared.SignBlock(block, sk, blockDomain) // TODO - dynamic domain
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
 
+		sign := time.Now()
+		log.Printf("sign: %f\n", sign.Sub(compu).Seconds())
+
 		// execute
-		state, err = st.ExecuteStateTransition(state, &core.SignedBlock{
+		c.State, err = st.ExecuteStateTransition(c.State, &core.SignedBlock{
 			Block:                block,
 			Signature:            sig.Serialize(),
 		})
 		if err != nil {
-			return nil, err
+			log.Fatal(err)
 		}
+
+		exe := time.Now()
+		log.Printf("exe: %f\n", exe.Sub(sign).Seconds())
 
 		// copy to previousBlockRoot
 		previousBlockHeader = &core.BlockHeader{}
-		deepcopier.Copy(state.LatestBlockHeader).To(previousBlockHeader)
+		deepcopier.Copy(c.State.LatestBlockHeader).To(previousBlockHeader)
 	}
-	return state, nil
+	return c
+}
+
+func populateAttestations(state *core.State, block *core.Block, slot uint64, justifiedEpoch uint64, finalizedEpoch uint64) {
+	if slot == 0 {
+		return // start from slot 1 forward
+	}
+
+	slotEpoch := shared.ComputeEpochAtSlot(slot)
+
+	for i := uint64(0) ; i < shared.GetCommitteeCountPerSlot(state, slot) ; i++{
+		// get attestation to sign
+		var targetRoot []byte
+		var err error
+		if slotEpoch == 0 {
+			targetRoot = params.ChainConfig.ZeroHash // use default genesis
+		} else {
+			targetRoot, err = shared.GetBlockRoot(state, slotEpoch)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		data := &core.AttestationData{
+			Slot:                 slot - 1,
+			CommitteeIndex:       i,
+			BeaconBlockRoot:      state.LatestBlockHeader.BodyRoot,
+			Source:               &core.Checkpoint{
+				Epoch:                0,
+				Root:                 state.PreviousJustifiedCheckpoint.Root,
+			},
+			Target:               &core.Checkpoint{
+				Epoch:                slotEpoch,
+				Root:                 targetRoot,
+			},
+		}
+		// root
+		root, err := ssz.HashTreeRoot(data)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// sign
+		indices, err := shared.GetAttestationCommittee(state, slot, i)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var aggregatedSig *bls.Sign
+		aggBits := make(bitfield.Bitlist, len(indices)) // for bytes
+		signed := uint64(0)
+		for aggIndex, index := range indices {
+			sk := &bls.SecretKey{}
+			sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", index))))
+
+			// sign
+			if aggregatedSig == nil {
+				aggregatedSig = sk.SignByte(root[:])
+			} else {
+				aggregatedSig.Add(sk.SignByte(root[:]))
+			}
+			aggBits.SetBitAt(uint64(aggIndex), true)
+			signed ++
+
+			if slotEpoch == justifiedEpoch || slotEpoch == finalizedEpoch {
+				// vote @ 2/3
+				if signed * 3 >= 2 * uint64(len(indices)) {
+					break
+				}
+			} else {
+				// vote @ 1/3
+				if signed * 3 >= 1 * uint64(len(indices)) {
+					break
+				}
+			}
+		}
+
+		block.Body.Attestations = append(block.Body.Attestations, &core.Attestation{
+			AggregationBits:      aggBits,
+			Data:                 data,
+			Signature:            aggregatedSig.Serialize(),
+		})
+	}
 }
 
 func signRandao(state *core.State, sk []byte) (*bls.Sign, error) {
 	// We bump the slot by one to accurately calculate the epoch as when this
-	// randao reveal will be verified the state.CurrentSlot will be +1
+	// randao reveal will be verified the state.Slot will be +1
 	copyState := shared.CopyState(state)
-	copyState.CurrentSlot ++
+	copyState.Slot++
 
 	data, domain, err := RANDAOSigningData(copyState)
 	if err != nil {

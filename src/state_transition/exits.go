@@ -2,9 +2,9 @@ package state_transition
 
 import (
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 )
 
 func ProcessExits(state *core.State, exits []*core.SignedVoluntaryExit) error {
@@ -43,7 +43,7 @@ func processExit(state *core.State, exit *core.SignedVoluntaryExit) error {
 	}
 
 	// Verify the validator is active
-	if !shared.IsActiveBP(bp, shared.GetCurrentEpoch(state)) {
+	if !shared.IsActiveValidator(bp, shared.GetCurrentEpoch(state)) {
 		return fmt.Errorf("process exit: BP %d not active", voluntaryExit.ValidatorIndex)
 	}
 	// Verify exit has not been initiated

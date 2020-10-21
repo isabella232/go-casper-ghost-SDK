@@ -2,9 +2,10 @@ package state_transition
 
 import (
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/sliceutil"
 )
 
 func ProcessProposerSlashings(state *core.State, slashings []*core.ProposerSlashing) error {
@@ -81,7 +82,7 @@ func processProposerSlashing(state *core.State, slashing *core.ProposerSlashing)
 			return err
 		}
 		if !res {
-			return fmt.Errorf("proposer slashing: sig not verified for proposer %d", proposer.Id)
+			return fmt.Errorf("proposer slashing: sig not verified for proposer %d", header1.ProposerIndex)
 		}
 	}
 	return nil
@@ -161,5 +162,5 @@ func slashableAttesterIndices(slashing *core.AttesterSlashing) []uint64 {
 	}
 	indices1 := slashing.Attestation_1.AttestingIndices
 	indices2 := slashing.Attestation_2.AttestingIndices
-	return shared.IntersectionUint64(indices1, indices2)
+	return sliceutil.IntersectionUint64(indices1, indices2)
 }

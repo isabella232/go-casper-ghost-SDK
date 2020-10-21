@@ -3,9 +3,10 @@ package shared
 import (
 	"bytes"
 	"fmt"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/core"
-	"github.com/bloxapp/eth2-staking-pools-research/go-spec/src/shared/params"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/wealdtech/go-bytesutil"
 	"sort"
 )
 
@@ -87,7 +88,7 @@ func ComputeCommittee(indices []uint64, seed []byte, index uint64, count uint64)
 
 	ret := []uint64{}
 	for i := start ; i < end ; i++ {
-		idx, err := computeShuffledIndex(i, uint64(len(indices)), SliceToByte32(seed), true,10) // TODO - shuffle round via config
+		idx, err := computeShuffledIndex(i, uint64(len(indices)), bytesutil.ToBytes32(seed), true,10) // TODO - shuffle round via config
 		if err != nil {
 			return []uint64{}, err
 		}
@@ -110,7 +111,7 @@ def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
 func GetCommitteeCountPerSlot(state *core.State, slot uint64) uint64 {
 	epoch := ComputeEpochAtSlot(slot)
 	bps := GetActiveValidators(state, epoch)
-	committeePerSlot := uint64(len(bps)) / params.ChainConfig.SlotsInEpoch / params.ChainConfig.MinAttestationCommitteeSize
+	committeePerSlot := uint64(len(bps)) / params.ChainConfig.SlotsInEpoch / params.ChainConfig.TargetCommitteeSize
 
 	if committeePerSlot > params.ChainConfig.MaxCommitteesPerSlot {
 		return params.ChainConfig.MaxCommitteesPerSlot
