@@ -6,7 +6,6 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
-	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
 	"sort"
 )
@@ -357,10 +356,11 @@ func ProcessFinalUpdates(state *core.State) error {
 
 	// Set historical root accumulator
 	if nextEpoch % (params.ChainConfig.SlotsPerHistoricalRoot / params.ChainConfig.SlotsInEpoch) == 0 {
-		root, err := ssz.HashTreeRoot(&core.HistoricalBatch{
+		hBatch := &core.HistoricalBatch{
 			BlockRoots:           state.BlockRoots,
 			StateRoots:           state.StateRoots,
-		})
+		}
+		root, err := hBatch.HashTreeRoot()
 		if err != nil {
 			return err;
 		}

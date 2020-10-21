@@ -42,8 +42,8 @@ func initBlockHeader() (*core.BlockHeader, error) {
 	return &core.BlockHeader{
 		Slot:                 0,
 		ProposerIndex:        0,
-		ParentRoot:           nil,
-		StateRoot:            nil,
+		ParentRoot:           params.ChainConfig.ZeroHash,
+		StateRoot:            params.ChainConfig.ZeroHash,
 		BodyRoot:             root[:],
 	}, nil
 }
@@ -122,6 +122,7 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 			Eth1DataVotes:               []*core.ETH1Data{},
 			Eth1DepositIndex:            0,
 			Validators:                  []*core.Validator{},
+			Balances: 					 []uint64{},
 			Slashings:                   []uint64{},
 		},
 	}
@@ -148,9 +149,14 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 		sk := &bls.SecretKey{}
 		sk.SetHexString(hex.EncodeToString([]byte(fmt.Sprintf("%d", uint64(i)))))
 
+		cred, err := ssz.HashTreeRoot([]byte("test_withdrawal_cred"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		depositMessage := &core.DepositMessage{
 			PublicKey:             sk.GetPublicKey().Serialize(),
-			WithdrawalCredentials: []byte("test_withdrawal_cred"),
+			WithdrawalCredentials: cred[:],
 			Amount:                32 * 1e9, // gwei
 		}
 		root, err := ssz.HashTreeRoot(depositMessage)
@@ -202,6 +208,7 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 		v := GetValidatorFromDeposit(c.State, deposit)
 		v.ActivationEpoch = 0
 		c.State.Validators = append(c.State.Validators, v)
+		c.State.Balances = append(c.State.Balances, deposit.Data.Amount)
 	}
 
 	// update genesis root
@@ -269,6 +276,11 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		pre := time.Now()
 		log.Printf("pre: %f\n", pre.Sub(start).Seconds())
 
+		eth1Vote, err := defaultEth1Data() // TODO - block eth1 vote dynamic?
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		block := &core.Block{
 			Slot:                 uint64(i),
 			Proposer:             pID,
@@ -277,6 +289,7 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 			Body:                 &core.BlockBody{
 				RandaoReveal:         randaoReveal.Serialize(),
 				Attestations:         []*core.Attestation{},
+				Eth1Data: 			  eth1Vote,
 			},
 		}
 		populateAttestations(c.State, block, uint64(i), justifiedEpoch, finalizedEpoch)

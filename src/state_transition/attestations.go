@@ -6,7 +6,6 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/herumi/bls-eth-go-binary/bls"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 func ProcessBlockAttestations(state *core.State, attestations []*core.Attestation) error {
@@ -206,7 +205,7 @@ func validateAttestationSignature(state *core.State, attestation *core.Attestati
 	if err != nil {
 		return err
 	}
-	root, err := ssz.HashTreeRoot(attestation.Data)
+	root, err := attestation.Data.HashTreeRoot()
 	if err != nil {
 		return err
 	}

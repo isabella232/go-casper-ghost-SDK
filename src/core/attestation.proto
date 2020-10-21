@@ -1,12 +1,12 @@
 syntax = "proto3";
-package state;
+package core;
 
 option go_package = ".;core";
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 message PendingAttestation {
-  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
+  bytes aggregation_bits = 1 [(gogoproto.moretags) = "ssz-size:\"?\" ssz-max:\"2048\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   AttestationData data = 2;
   uint64 InclusionDelay = 3;
   uint64 ProposerIndex = 4;

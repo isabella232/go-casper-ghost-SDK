@@ -1,5 +1,5 @@
 syntax = "proto3";
-package state;
+package core;
 
 option go_package = ".;core";
 

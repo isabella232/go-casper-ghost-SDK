@@ -3,7 +3,6 @@ package state_transition
 import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
-	"github.com/prysmaticlabs/go-ssz"
 	"log"
 	"time"
 )
@@ -45,7 +44,7 @@ func processSlot(state *core.State) error {
 	start := time.Now()
 
 	// state root
-	stateRoot, err := ssz.HashTreeRoot(state)
+	stateRoot, err := state.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -58,7 +57,7 @@ func processSlot(state *core.State) error {
 	log.Printf("state root: %f\n", strot.Sub(start).Seconds())
 
 	// add block root
-	root, err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	root, err := state.LatestBlockHeader.HashTreeRoot()
 	if err != nil {
 		return err
 	}

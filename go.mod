@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20200826142241-3a913c5a1313 // indirect
+	github.com/ferranbt/fastssz v0.0.0-20201020132831-68dc48984fd3
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.2

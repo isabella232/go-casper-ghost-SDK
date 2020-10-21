@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
-	"github.com/prysmaticlabs/go-ssz"
 )
 
 type IStateTransition interface {
@@ -87,7 +86,7 @@ func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock 
 		return nil, err
 	}
 
-	postStateRoot, err := ssz.HashTreeRoot(newState)
+	postStateRoot, err := newState.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +108,7 @@ func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core
 		return [32]byte{}, err
 	}
 
-	return ssz.HashTreeRoot(stateCopy)
+	return stateCopy.HashTreeRoot()
 }
 
 

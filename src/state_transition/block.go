@@ -85,7 +85,7 @@ func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedBlock
 	}
 
 	// parent
-	root,err := ssz.HashTreeRoot(state.LatestBlockHeader)
+	root,err := state.LatestBlockHeader.HashTreeRoot()
 	if err != nil {
 		return err
 	}
@@ -103,6 +103,7 @@ func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedBlock
 		ProposerIndex:        block.Proposer,
 		ParentRoot:           block.ParentRoot,
 		BodyRoot:             root[:],
+		StateRoot: 			  params.ChainConfig.ZeroHash, // state_root: zeroed, overwritten in the next `process_slot` call
 	}
 
 	// TODO - verify proposer is not slashed
