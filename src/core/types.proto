@@ -10,7 +10,7 @@ import "src/core/attestation.proto";
 message State {
     // versioning
     uint64 GenesisTime = 10;
-    uint64 CurrentSlot = 11;
+    uint64 Slot = 11;
     BlockHeader LatestBlockHeader = 12;
     Fork Fork = 13;
 

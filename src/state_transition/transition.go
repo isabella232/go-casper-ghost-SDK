@@ -124,9 +124,9 @@ func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core
 //		return []byte{}, err
 //	}
 //
-//	root := shared.GetStateRoot(newState, newState.CurrentSlot)
+//	root := shared.GetStateRoot(newState, newState.Slot)
 //	if len(root) == 0 {
-//		return []byte{}, fmt.Errorf("could not find statet root for epoch %d", newState.CurrentSlot)
+//		return []byte{}, fmt.Errorf("could not find statet root for epoch %d", newState.Slot)
 //	}
 //
 //	return root[:], nil

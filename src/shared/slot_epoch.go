@@ -36,7 +36,7 @@ def get_current_epoch(state: BeaconState) -> Epoch:
     return compute_epoch_at_slot(state.slot)
  */
 func GetCurrentEpoch(state *core.State) uint64 {
-	return ComputeEpochAtSlot(state.CurrentSlot)
+	return ComputeEpochAtSlot(state.Slot)
 }
 
 /**
@@ -74,7 +74,7 @@ def get_block_root_at_slot(state: BeaconState, slot: Slot) -> Root:
     return state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
  */
 func GetBlockRootAtSlot(state *core.State, slot uint64) ([]byte, error) {
-	if slot >= state.CurrentSlot || state.CurrentSlot > slot + params.ChainConfig.SlotsPerHistoricalRoot {
+	if slot >= state.Slot || state.Slot > slot + params.ChainConfig.SlotsPerHistoricalRoot {
 		return nil, fmt.Errorf("block root at slot not found")
 	}
 	return state.BlockRoots[slot % params.ChainConfig.SlotsPerHistoricalRoot], nil

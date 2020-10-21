@@ -168,7 +168,7 @@ def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndex:
 func GetBlockProposerIndex(state *core.State) (uint64, error) {
 	epoch := GetCurrentEpoch(state)
 	seed := GetSeed(state, epoch, params.ChainConfig.DomainBeaconProposer)
-	SeedWithSlot := append(seed[:], bytesutil.Bytes8(state.CurrentSlot)...)
+	SeedWithSlot := append(seed[:], bytesutil.Bytes8(state.Slot)...)
 	hash := hashutil.Hash(SeedWithSlot)
 
 	validators := GetActiveValidators(state, epoch)
@@ -314,8 +314,8 @@ func SlashValidator(state *core.State, slashedIndex uint64) error {
 
 
 // returns error if not found
-func ValidatorByPubkey(state *core.State, pk []byte) (uint64, error) {
-	// TODO - ValidatorByPubkey optimize with some kind of map
+func ValidatorIndexByPubkey(state *core.State, pk []byte) (uint64, error) {
+	// TODO - ValidatorIndexByPubkey optimize with some kind of map
 	for i, bp := range state.Validators {
 		if bytes.Equal(pk, bp.PubKey) {
 			return uint64(i), nil

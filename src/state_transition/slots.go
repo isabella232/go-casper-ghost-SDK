@@ -4,10 +4,12 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/go-ssz"
+	"log"
+	"time"
 )
 
 func (st *StateTransition) ProcessSlots(state *core.State, slot uint64) error {
-	for state.CurrentSlot < slot {
+	for state.Slot < slot {
 		if err := processSlot(state); err != nil {
 			return err
 		}
@@ -17,7 +19,7 @@ func (st *StateTransition) ProcessSlots(state *core.State, slot uint64) error {
 				return err
 			}
 		}
-		state.CurrentSlot ++
+		state.Slot++
 	}
 
 	return nil
@@ -40,33 +42,33 @@ func (st *StateTransition) ProcessSlots(state *core.State, slot uint64) error {
 //    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 func processSlot(state *core.State) error {
-	//start := time.Now()
+	start := time.Now()
 
 	// state root
 	stateRoot, err := ssz.HashTreeRoot(state)
 	if err != nil {
 		return err
 	}
-	state.StateRoots[state.CurrentSlot % params.ChainConfig.SlotsPerHistoricalRoot] = stateRoot[:]
+	state.StateRoots[state.Slot% params.ChainConfig.SlotsPerHistoricalRoot] = stateRoot[:]
 
 	// update latest header
 	state.LatestBlockHeader.StateRoot = stateRoot[:]
 
-	//strot := time.Now()
-	//log.Printf("state root: %f\n", strot.Sub(start).Seconds())
+	strot := time.Now()
+	log.Printf("state root: %f\n", strot.Sub(start).Seconds())
 
 	// add block root
 	root, err := ssz.HashTreeRoot(state.LatestBlockHeader)
 	if err != nil {
 		return err
 	}
-	state.BlockRoots[state.CurrentSlot % params.ChainConfig.SlotsPerHistoricalRoot] = root[:]
+	state.BlockRoots[state.Slot% params.ChainConfig.SlotsPerHistoricalRoot] = root[:]
 
-	//blk := time.Now()
-	//log.Printf("block root: %f\n", blk.Sub(strot).Seconds())
+	blk := time.Now()
+	log.Printf("block root: %f\n", blk.Sub(strot).Seconds())
 	return nil
 }
 
 func canProcessEpoch(state *core.State) bool {
-	return (state.CurrentSlot + 1) % params.ChainConfig.SlotsInEpoch == 0
+	return (state.Slot+ 1) % params.ChainConfig.SlotsInEpoch == 0
 }

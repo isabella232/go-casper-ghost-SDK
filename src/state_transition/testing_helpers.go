@@ -90,9 +90,9 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 
 	ret := &StateTestContext{
 		State: &core.State{
-			GenesisTime:                 genesisTime,
-			CurrentSlot:                 0,
-			LatestBlockHeader:           initBlockHeader,
+			GenesisTime:       genesisTime,
+			Slot:              0,
+			LatestBlockHeader: initBlockHeader,
 			Fork:                        &core.Fork{
 				PreviousVersion:      config.GenesisForkVersion,
 				CurrentVersion:       config.GenesisForkVersion,
@@ -238,7 +238,7 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		// we increment it before we gt proposer as this is what happens in real block processing
 		// in slot > 0 the process slots is called before process block which increments slot by 1
 		if i != 0 {
-			stateCopy.CurrentSlot ++
+			stateCopy.Slot++
 		}
 		pID, err := shared.GetBlockProposerIndex(stateCopy)
 		if err != nil {
@@ -415,9 +415,9 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 
 func signRandao(state *core.State, sk []byte) (*bls.Sign, error) {
 	// We bump the slot by one to accurately calculate the epoch as when this
-	// randao reveal will be verified the state.CurrentSlot will be +1
+	// randao reveal will be verified the state.Slot will be +1
 	copyState := shared.CopyState(state)
-	copyState.CurrentSlot ++
+	copyState.Slot++
 
 	data, domain, err := RANDAOSigningData(copyState)
 	if err != nil {

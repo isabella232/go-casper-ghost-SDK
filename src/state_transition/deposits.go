@@ -76,7 +76,7 @@ func processDeposit(state *core.State, deposit *core.Deposit) error {
 
 	pubkey := deposit.Data.PublicKey
 	amount := deposit.Data.Amount
-	index, err := shared.ValidatorByPubkey(state, pubkey)
+	index, err := shared.ValidatorIndexByPubkey(state, pubkey)
 	if err != nil {
 		// Verify the deposit signature (proof of possession) which is not checked by the deposit contract
 		depositMsg := &core.DepositMessage{

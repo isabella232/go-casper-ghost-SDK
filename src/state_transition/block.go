@@ -70,7 +70,7 @@ func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedBlock
 	block := signedBlock.Block
 
 	// slot
-	if state.CurrentSlot != block.Slot {
+	if state.Slot != block.Slot {
 		return fmt.Errorf("block slot doesn't match state slot")
 	}
 

@@ -92,11 +92,11 @@ func appendPendingAttestation(state *core.State, attestation *core.Attestation) 
 	pendingAtt := &core.PendingAttestation{
 		AggregationBits:      attestation.AggregationBits,
 		Data:                 attestation.Data,
-		InclusionDelay:       state.CurrentSlot - attestation.Data.Slot,
+		InclusionDelay:       state.Slot - attestation.Data.Slot,
 		ProposerIndex:        proposer,
 	}
 
-	if attestation.Data.Target.Epoch == shared.ComputeEpochAtSlot(state.CurrentSlot) {
+	if attestation.Data.Target.Epoch == shared.ComputeEpochAtSlot(state.Slot) {
 		if !core.CheckpointsEqual(attestation.Data.Source, state.CurrentJustifiedCheckpoint) {
 			return fmt.Errorf("source doesn't equal current justified checkpoint")
 		}
@@ -137,10 +137,10 @@ func validateAttestationData(state *core.State, data *core.AttestationData) erro
 		return fmt.Errorf("target slot not in the correct epoch")
 	}
 
-	if data.Slot + params.ChainConfig.MinAttestationInclusionDelay > state.CurrentSlot {
+	if data.Slot + params.ChainConfig.MinAttestationInclusionDelay > state.Slot {
 		return fmt.Errorf("min att. inclusion delay did not pass")
 	}
-	if state.CurrentSlot > data.Slot + params.ChainConfig.SlotsInEpoch {
+	if state.Slot > data.Slot + params.ChainConfig.SlotsInEpoch {
 		return fmt.Errorf("slot to submit att. has passed")
 	}
 

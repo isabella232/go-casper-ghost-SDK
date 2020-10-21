@@ -60,6 +60,8 @@ func mainnetConfig() *core.ChainConfig {
 		// state list lengths
 		EpochsPerHistoricalVector: 1 << 16, // ~36 days
 		EpochsPerSlashingVector: 1 << 13, // 8,192, ~36 days
+		HistoricalRootsLimit: 1<<24, // 2^24 = 16,777,216
+		ValidatorRegistryLimit: 1<<40, // 2^40=1,099,511,627,776
 
 		// rewards and penalties
 		BaseRewardFactor: 1 << 6, // 64

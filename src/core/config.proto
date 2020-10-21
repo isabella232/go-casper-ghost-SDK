@@ -45,6 +45,8 @@ message ChainConfig {
   // state list lengths
   uint64 EpochsPerHistoricalVector = 400;
   uint64 EpochsPerSlashingVector = 401;
+  uint64 HistoricalRootsLimit = 402;
+  uint64 ValidatorRegistryLimit = 403;
 
   // rewards and penalties
   uint64 BaseRewardFactor = 500; // base reward for attestation/ proposer
