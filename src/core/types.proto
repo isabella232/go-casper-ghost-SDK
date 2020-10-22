@@ -31,7 +31,7 @@ message State {
 
     // eth 1
     ETH1Data Eth1Data = 40;
-    repeated ETH1Data Eth1DataVotes = 41 [(gogoproto.moretags) = "ssz-max:\"16\""];
+    repeated ETH1Data Eth1DataVotes = 41 [(gogoproto.moretags) = "ssz-max:\"1024\""];
     uint64 Eth1DepositIndex = 42;
 
     // network

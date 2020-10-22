@@ -259,7 +259,7 @@ func ProcessRegistryUpdates(state *core.State) error {
 	})
 
 	// Dequeued validators for activation up to churn limit
-	for index := range activationQueue[:shared.GetBPChurnLimit(state)] {
+	for index := range activationQueue[:mathutil.Min(uint64(len(activationQueue)), shared.GetValidatorChurnLimit(state))] {
 		bp := state.Validators[index]
 		bp.ActivationEpoch = shared.ComputeActivationExitEpoch(shared.GetCurrentEpoch(state))
 	}

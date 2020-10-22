@@ -81,7 +81,7 @@ func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedBlock
 	}
 	proposerId :=  block.GetProposer()
 	if expectedProposer != proposerId {
-		return fmt.Errorf("process block: block expectedProposer is worng, expected %d but received %d", expectedProposer, proposerId)
+		return fmt.Errorf("block expectedProposer is worng, expected %d but received %d", expectedProposer, proposerId)
 	}
 
 	// parent

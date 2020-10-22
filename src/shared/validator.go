@@ -146,7 +146,7 @@ def get_validator_churn_limit(state: BeaconState) -> uint64:
     active_validator_indices = get_active_validator_indices(state, get_current_epoch(state))
     return max(MIN_PER_EPOCH_CHURN_LIMIT, uint64(len(active_validator_indices)) // CHURN_LIMIT_QUOTIENT)
  */
-func GetBPChurnLimit(state *core.State) uint64 {
+func GetValidatorChurnLimit(state *core.State) uint64 {
 	activeBPs := GetActiveValidators(state, GetCurrentEpoch(state))
 	churLimit := uint64(len(activeBPs)) / params.ChainConfig.ChurnLimitQuotient
 	if churLimit < params.ChainConfig.MinPerEpochChurnLimit {

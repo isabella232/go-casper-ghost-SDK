@@ -383,23 +383,23 @@ def get_attestation_deltas(state: BeaconState) -> Tuple[Sequence[Gwei], Sequence
 func GetAttestationDeltas(state *core.State) ([]uint64, []uint64, error) {
 	sourceRewards, sourcePenalties, err := GetSourceDeltas(state)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("GetAttestationDeltas: %s", err.Error())
 	}
 	targetRewards, targetPenalties, err := GetTargetDeltas(state)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("GetAttestationDeltas: %s", err.Error())
 	}
 	headRewards, headPenalties, err := GetHeadDeltas(state)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("GetAttestationDeltas: %s", err.Error())
 	}
 	inclusioDelayRewards, _, err := GetInclusionDelayDeltas(state)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("GetAttestationDeltas: %s", err.Error())
 	}
 	_, inactivityPenalties, err := GetInactivityPenaltyDeltas(state)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("GetAttestationDeltas: %s", err.Error())
 	}
 
 	rewards := uint64ZeroArray(uint64(len(state.Validators)))

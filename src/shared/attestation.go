@@ -143,7 +143,7 @@ func GetAttestationCommittee(state *core.State, slot uint64, index uint64) ([]ui
 	return ComputeCommittee(
 			GetActiveValidators(state, epoch),
 			seed[:],
-			(slot & params.ChainConfig.SlotsInEpoch) * committeesPerSlot + index,
+			(slot % params.ChainConfig.SlotsInEpoch) * committeesPerSlot + index,
 			committeesPerSlot * params.ChainConfig.SlotsInEpoch,
 		)
 }

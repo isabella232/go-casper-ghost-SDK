@@ -8,14 +8,6 @@ import (
 	"log"
 )
 
-// There are 21 fields in the beacon state.
-const fieldCount = 21
-
-var (
-	leavesCache = make(map[string][][32]byte, fieldCount)
-	layersCache = make(map[string][][][32]byte, fieldCount)
-)
-
 func CopyState(state *core.State) *core.State {
 	if state == nil {
 		return nil

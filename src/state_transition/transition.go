@@ -79,19 +79,19 @@ func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock 
 	newState = shared.CopyState(state)
 
 	if err := st.ProcessSlots(newState, signedBlock.Block.Slot); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ExecuteStateTransition: %s", err.Error())
 	}
 
 	if err := st.ProcessBlock(newState, signedBlock); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ExecuteStateTransition: %s", err.Error())
 	}
 
 	postStateRoot, err := newState.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ExecuteStateTransition: %s", err.Error())
 	}
 	if !bytes.Equal(signedBlock.Block.StateRoot, postStateRoot[:]) {
-		return nil, fmt.Errorf("state transition: new block state root is wrong, expected %s", hex.EncodeToString(postStateRoot[:]))
+		return nil, fmt.Errorf("ExecuteStateTransition: new block state root is wrong, expected %s", hex.EncodeToString(postStateRoot[:]))
 	}
 
 	return newState, nil
@@ -102,31 +102,12 @@ func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core
 	stateCopy := shared.CopyState(state)
 
 	if err := st.ProcessSlots(stateCopy, signedBlock.Block.Slot); err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, fmt.Errorf("ComputeStateRoot: %s", err.Error())
 	}
+
 	if err := st.processBlockForStateRoot(stateCopy, signedBlock); err != nil {
-		return [32]byte{}, err
+		return [32]byte{}, fmt.Errorf("ComputeStateRoot: %s", err.Error())
 	}
 
 	return stateCopy.HashTreeRoot()
 }
-
-
-//// A helper function to insert the post block state root to the block block
-//// TODO - move from here
-//func CalculateAndInsertStateRootToBlock(state *core.State, signedBlock *core.SignedBlock) ([]byte, error) {
-//	st := NewStateTransition()
-//
-//	newState := shared.CopyState(state)
-//	err := st.ProcessBlock(newState, signedBlock)
-//	if err != nil {
-//		return []byte{}, err
-//	}
-//
-//	root := shared.GetStateRoot(newState, newState.Slot)
-//	if len(root) == 0 {
-//		return []byte{}, fmt.Errorf("could not find statet root for epoch %d", newState.Slot)
-//	}
-//
-//	return root[:], nil
-//}
