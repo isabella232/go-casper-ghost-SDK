@@ -123,7 +123,7 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 			Eth1DepositIndex:            0,
 			Validators:                  []*core.Validator{},
 			Balances: 					 []uint64{},
-			Slashings:                   []uint64{},
+			Slashings:                   make([]uint64, params.ChainConfig.EpochsPerSlashingVector),
 		},
 	}
 
@@ -207,6 +207,7 @@ func (c *StateTestContext) PopulateGenesisValidator(validatorIndexEnd uint64) *S
 		// Add validator and balance entries
 		v := GetValidatorFromDeposit(c.State, deposit)
 		v.ActivationEpoch = 0
+		v.ActivationEligibilityEpoch = 0
 		c.State.Validators = append(c.State.Validators, v)
 		c.State.Balances = append(c.State.Balances, deposit.Data.Amount)
 	}
@@ -262,13 +263,13 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		// parent
 		// replicates what the next process slot does
 		if i != 0 {
-			stateRoot,err := ssz.HashTreeRoot(c.State)
+			stateRoot,err := c.State.HashTreeRoot()
 			if err != nil {
 				log.Fatal(err)
 			}
 			previousBlockHeader.StateRoot =  stateRoot[:]
 		}
-		parentRoot,err := ssz.HashTreeRoot(previousBlockHeader)
+		parentRoot,err := previousBlockHeader.HashTreeRoot()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -299,7 +300,6 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 
 		// process
 		st := NewStateTransition()
-
 		// compute state root
 		root, err := st.ComputeStateRoot(c.State, &core.SignedBlock{
 			Block:                block,
@@ -346,29 +346,32 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 }
 
 func populateAttestations(state *core.State, block *core.Block, slot uint64, justifiedEpoch uint64, finalizedEpoch uint64) {
-	if slot == 0 {
+	if slot == 0 { // TODO - attestations at slot 0?
 		return // start from slot 1 forward
 	}
 
-	slotEpoch := shared.ComputeEpochAtSlot(slot)
+	// every block we collect attestations "broadcasted" in the previous slot
+	slotEpoch := shared.ComputeEpochAtSlot(slot-1)
 
-	for i := uint64(0) ; i < shared.GetCommitteeCountPerSlot(state, slot) ; i++{
+	nextStateCopy := shared.CopyState(state)
+	nextStateCopy.Slot ++
+	for i := uint64(0) ; i < shared.GetCommitteeCountPerSlot(nextStateCopy, slot-1) ; i++{
 		// get attestation to sign
 		var targetRoot []byte
 		var err error
 		if slotEpoch == 0 {
 			targetRoot = params.ChainConfig.ZeroHash // use default genesis
 		} else {
-			targetRoot, err = shared.GetBlockRoot(state, slotEpoch)
+			targetRoot, err = shared.GetBlockRoot(nextStateCopy, slotEpoch)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalf("populateAttestations: %s", err.Error())
 			}
 		}
 
 		data := &core.AttestationData{
 			Slot:                 slot - 1,
 			CommitteeIndex:       i,
-			BeaconBlockRoot:      state.LatestBlockHeader.BodyRoot,
+			BeaconBlockRoot:      nextStateCopy.LatestBlockHeader.BodyRoot,
 			Source:               &core.Checkpoint{
 				Epoch:                0,
 				Root:                 state.PreviousJustifiedCheckpoint.Root,
@@ -381,13 +384,13 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 		// root
 		root, err := ssz.HashTreeRoot(data)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("populateAttestations: %s", err.Error())
 		}
 
 		// sign
-		indices, err := shared.GetAttestationCommittee(state, slot, i)
+		indices, err := shared.GetAttestationCommittee(nextStateCopy, slot-1, i)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("populateAttestations: %s", err.Error())
 		}
 		var aggregatedSig *bls.Sign
 		aggBits := make(bitfield.Bitlist, len(indices)) // for bytes

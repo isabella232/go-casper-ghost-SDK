@@ -218,7 +218,7 @@ def get_matching_source_attestations(state: BeaconState, epoch: Epoch) -> Sequen
     return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
  */
 func GetMatchingSourceAttestations(state *core.State, epoch uint64) ([]*core.PendingAttestation, error) {
-	if epoch != GetPreviousEpoch(state) || epoch != GetCurrentEpoch(state) {
+	if epoch != GetPreviousEpoch(state) && epoch != GetCurrentEpoch(state) {
 		return nil, fmt.Errorf("epoch not current nor previous")
 	}
 	if epoch == GetCurrentEpoch(state) {
