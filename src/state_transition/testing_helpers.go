@@ -1,6 +1,7 @@
 package state_transition
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
@@ -233,6 +234,14 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		log.Fatal(err)
 	}
 	for i := 0 ; i < maxBlocks ; i++ {
+		if uint64(i) % params.ChainConfig.SlotsInEpoch == 0 {
+			str := "\n\n#########\nEpoch %d\n"
+			str += "Pre justified epoch: %d\n"
+			str += "Current justified epoch: %d\n"
+			str += "Finalized epoch: %d\n"
+			str += "#########\n\n"
+			log.Printf(str, shared.ComputeEpochAtSlot(uint64(i)), c.State.PreviousJustifiedCheckpoint.Epoch, c.State.CurrentJustifiedCheckpoint.Epoch, c.State.FinalizedCheckpoint.Epoch)
+		}
 		log.Printf("progressing block %d\n", i)
 
 		start := time.Now()
@@ -293,7 +302,7 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 				Eth1Data: 			  eth1Vote,
 			},
 		}
-		populateAttestations(c.State, block, uint64(i), justifiedEpoch, finalizedEpoch)
+		populateAttestations(c.State, block, uint64(i), justifiedEpoch, finalizedEpoch, block.ParentRoot)
 
 		att := time.Now()
 		log.Printf("att: %f\n", att.Sub(pre).Seconds())
@@ -345,7 +354,7 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 	return c
 }
 
-func populateAttestations(state *core.State, block *core.Block, slot uint64, justifiedEpoch uint64, finalizedEpoch uint64) {
+func populateAttestations(state *core.State, block *core.Block, slot uint64, justifiedEpoch uint64, finalizedEpoch uint64, headRoot []byte) {
 	if slot == 0 { // TODO - attestations at slot 0?
 		return // start from slot 1 forward
 	}
@@ -355,17 +364,17 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 
 	nextStateCopy := shared.CopyState(state)
 	nextStateCopy.Slot ++
+
 	for i := uint64(0) ; i < shared.GetCommitteeCountPerSlot(nextStateCopy, slot-1) ; i++{
 		// get attestation to sign
 		var targetRoot []byte
 		var err error
-		if slotEpoch == 0 {
-			targetRoot = params.ChainConfig.ZeroHash // use default genesis
-		} else {
-			targetRoot, err = shared.GetBlockRoot(nextStateCopy, slotEpoch)
-			if err != nil {
-				log.Fatalf("populateAttestations: %s", err.Error())
-			}
+		targetRoot, err = shared.GetBlockRoot(nextStateCopy, slotEpoch)
+		if err != nil {
+			log.Fatalf("populateAttestations: %s", err.Error())
+		}
+		if bytes.Equal(targetRoot, params.ChainConfig.ZeroHash) {
+			targetRoot = headRoot
 		}
 
 		data := &core.AttestationData{
@@ -374,7 +383,7 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 			BeaconBlockRoot:      nextStateCopy.LatestBlockHeader.BodyRoot,
 			Source:               &core.Checkpoint{
 				Epoch:                0,
-				Root:                 state.PreviousJustifiedCheckpoint.Root,
+				Root:                 state.CurrentJustifiedCheckpoint.Root,
 			},
 			Target:               &core.Checkpoint{
 				Epoch:                slotEpoch,
@@ -408,9 +417,9 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 			aggBits.SetBitAt(uint64(aggIndex), true)
 			signed ++
 
-			if slotEpoch == justifiedEpoch || slotEpoch == finalizedEpoch {
+			if slotEpoch <= justifiedEpoch + 1 || slotEpoch <= finalizedEpoch + 1 {
 				// vote @ 2/3
-				if signed * 3 >= 2 * uint64(len(indices)) {
+				if signed * 2 >= 2 * uint64(len(indices)) {
 					break
 				}
 			} else {

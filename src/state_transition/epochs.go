@@ -1,12 +1,12 @@
 package state_transition
 
 import (
-	"bytes"
-	"fmt"
+	"encoding/hex"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/mathutil"
+	"log"
 	"sort"
 )
 
@@ -35,7 +35,50 @@ func processEpoch(state *core.State) error {
 	return nil
 }
 
-// https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization
+
+
+/**
+def process_justification_and_finalization(state: BeaconState) -> None:
+    # Initial FFG checkpoint values have a `0x00` stub for `root`.
+    # Skip FFG updates in the first two epochs to avoid corner cases that might result in modifying this stub.
+    if get_current_epoch(state) <= GENESIS_EPOCH + 1:
+        return
+
+    previous_epoch = get_previous_epoch(state)
+    current_epoch = get_current_epoch(state)
+    old_previous_justified_checkpoint = state.previous_justified_checkpoint
+    old_current_justified_checkpoint = state.current_justified_checkpoint
+
+    # Process justifications
+    state.previous_justified_checkpoint = state.current_justified_checkpoint
+    state.justification_bits[1:] = state.justification_bits[:JUSTIFICATION_BITS_LENGTH - 1]
+    state.justification_bits[0] = 0b0
+    matching_target_attestations = get_matching_target_attestations(state, previous_epoch)  # Previous epoch
+    if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+        state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
+                                                        root=get_block_root(state, previous_epoch))
+        state.justification_bits[1] = 0b1
+    matching_target_attestations = get_matching_target_attestations(state, current_epoch)  # Current epoch
+    if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+        state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
+                                                        root=get_block_root(state, current_epoch))
+        state.justification_bits[0] = 0b1
+
+    # Process finalizations
+    bits = state.justification_bits
+    # The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+    if all(bits[1:4]) and old_previous_justified_checkpoint.epoch + 3 == current_epoch:
+        state.finalized_checkpoint = old_previous_justified_checkpoint
+    # The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+    if all(bits[1:3]) and old_previous_justified_checkpoint.epoch + 2 == current_epoch:
+        state.finalized_checkpoint = old_previous_justified_checkpoint
+    # The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+    if all(bits[0:3]) and old_current_justified_checkpoint.epoch + 2 == current_epoch:
+        state.finalized_checkpoint = old_current_justified_checkpoint
+    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
+        state.finalized_checkpoint = old_current_justified_checkpoint
+ */
 func processJustificationAndFinalization(state *core.State) error {
 	if shared.GetCurrentEpoch(state) <= params.ChainConfig.GenesisEpoch + 1 {
 		return nil
@@ -53,11 +96,20 @@ func processJustificationAndFinalization(state *core.State) error {
 	newBits.Shift(1)
 	state.JustificationBits = newBits
 
-	prev, current, err := calculateAttestingBalances(state)
+
+	totalActive := shared.GetTotalActiveBalance(state)
+
+	// Calculate previous epoch attestations justifications.
+	matchingTargetAttestations, err := shared.GetMatchingTargetAttestations(state, previousEpoch)
 	if err != nil {
 		return err
 	}
-	if prev.AttestingBalance * 3 >= prev.ActiveBalance * 2 {
+	prevAttestingBalance, err := shared.GetAttestingBalances(state, matchingTargetAttestations)
+	if err != nil {
+		return err
+	}
+	log.Printf("Prev epoch %d participation rate: %f\n", previousEpoch, float64(prevAttestingBalance) / float64(totalActive))
+	if prevAttestingBalance * 3 >= totalActive * 2 {
 		root, err := shared.GetBlockRoot(state, previousEpoch)
 		if err != nil {
 			return err
@@ -68,8 +120,20 @@ func processJustificationAndFinalization(state *core.State) error {
 		}
 		newBits.SetBitAt(1, true)
 		state.JustificationBits = newBits
+		log.Printf("Justified epoch %d with root %s", previousEpoch, hex.EncodeToString(root))
 	}
-	if current.AttestingBalance * 3 >= current.ActiveBalance * 2 {
+
+	// Calculate current epoch attestations justifications.
+	matchingTargetAttestations, err = shared.GetMatchingTargetAttestations(state, currentEpoch)
+	if err != nil {
+		return err
+	}
+	currentAttestingBalance, err := shared.GetAttestingBalances(state, matchingTargetAttestations)
+	if err != nil {
+		return err
+	}
+	log.Printf("Current epoch %d participation rate: %f\n", currentEpoch, float64(currentAttestingBalance) / float64(totalActive))
+	if currentAttestingBalance * 3 >= totalActive * 2 {
 		root, err := shared.GetBlockRoot(state, currentEpoch)
 		if err != nil {
 			return err
@@ -80,6 +144,7 @@ func processJustificationAndFinalization(state *core.State) error {
 		}
 		newBits.SetBitAt(0, true)
 		state.JustificationBits = newBits
+		log.Printf("Justified epoch %d with root %s", currentEpoch, hex.EncodeToString(root))
 	}
 
 	// process finalization
@@ -88,21 +153,25 @@ func processJustificationAndFinalization(state *core.State) error {
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
 	if justification&0x0E == 0x0E && (oldPrevJustificationPoint.Epoch+3) == currentEpoch {
 		state.FinalizedCheckpoint = oldPrevJustificationPoint
+		log.Printf("Finalized epoch %d with root %s", state.FinalizedCheckpoint.Epoch, hex.EncodeToString(state.FinalizedCheckpoint.Root))
 	}
 
 	// 2nd/3rd (0b0110) most recent epochs are justified, the 2nd using the 3rd as source.
 	if justification&0x06 == 0x06 && (oldPrevJustificationPoint.Epoch+2) == currentEpoch {
 		state.FinalizedCheckpoint = oldPrevJustificationPoint
+		log.Printf("Finalized epoch %d with root %s", state.FinalizedCheckpoint.Epoch, hex.EncodeToString(state.FinalizedCheckpoint.Root))
 	}
 
 	// 1st/2nd/3rd (0b0111) most recent epochs are justified, the 1st using the 3rd as source.
 	if justification&0x07 == 0x07 && (oldCurrentJustificationPoint.Epoch+2) == currentEpoch {
 		state.FinalizedCheckpoint = oldCurrentJustificationPoint
+		log.Printf("Finalized epoch %d with root %s", state.FinalizedCheckpoint.Epoch, hex.EncodeToString(state.FinalizedCheckpoint.Root))
 	}
 
 	// The 1st/2nd (0b0011) most recent epochs are justified, the 1st using the 2nd as source
 	if justification&0x03 == 0x03 && (oldCurrentJustificationPoint.Epoch+1) == currentEpoch {
 		state.FinalizedCheckpoint = oldCurrentJustificationPoint
+		log.Printf("Finalized epoch %d with root %s", state.FinalizedCheckpoint.Epoch, hex.EncodeToString(state.FinalizedCheckpoint.Root))
 	}
 	return nil
 }
@@ -133,82 +202,6 @@ func ProcessRewardsAndPenalties(state *core.State) error {
 		shared.DecreaseBalance(state, uint64(index), penalties[uint64(index)])
 	}
 	return nil
-}
-
-type Balances struct {
-	Epoch uint64
-	ActiveBalance uint64
-	AttestingIndexes []uint64
-	AttestingBalance uint64
-}
-
-func calculateAttestingBalances(state *core.State) (prev *Balances, current *Balances, err error) {
-	// TODO - assert epoch in [currentEpoch, previousEpoch]
-
-	calc := func(attestations []*core.PendingAttestation, epoch uint64) (*Balances,error) {
-		// filter matching att. by target root
-		matchingAtt := make([]*core.PendingAttestation, 0)
-		for _, att := range attestations {
-			root, err := shared.GetBlockRoot(state, epoch)
-			if err != nil {
-				return nil, err
-			}
-			if  root != nil {
-				if bytes.Equal(att.Data.Target.Root, root) {
-					matchingAtt = append(matchingAtt, att)
-				}
-			} else {
-				return nil, fmt.Errorf("could not find block root for epoch %d", epoch)
-			}
-		}
-
-		ret := &Balances{
-			Epoch:            epoch,
-			ActiveBalance:    0,
-			AttestingIndexes: []uint64{},
-			AttestingBalance: 0,
-		}
-
-		// calculate attesting balance and indices
-		for _, att := range matchingAtt {
-			attestingIndices, err := shared.GetAttestingIndices(state, att.Data, att.AggregationBits)
-			if err != nil {
-				return nil, err
-			}
-			for _, idx := range attestingIndices {
-				bp := shared.GetValidator(state, idx)
-				if bp != nil && !bp.Slashed {
-					ret.AttestingIndexes = append(ret.AttestingIndexes, idx)
-					ret.AttestingBalance += bp.EffectiveBalance
-				}
-			}
-		}
-
-		// get active balance
-		activeBps := shared.GetActiveValidators(state, shared.GetCurrentEpoch(state))
-		for _, idx := range activeBps {
-			bp := shared.GetValidator(state, idx)
-			if bp != nil {
-				ret.ActiveBalance += bp.EffectiveBalance
-			}
-		}
-
-		return ret, nil
-	}
-
-	currentEpoch := shared.GetCurrentEpoch(state)
-	previousEpoch := shared.GetPreviousEpoch(state)
-	prev, err = calc(state.PreviousEpochAttestations, previousEpoch)
-	if err != nil {
-		return nil, nil, err
-	}
-	current, err = calc(state.CurrentEpochAttestations, currentEpoch)
-	if err != nil {
-		return nil, nil, err
-	}
-
-
-	return prev, current, nil
 }
 
 /**
@@ -280,7 +273,7 @@ def process_slashings(state: BeaconState) -> None:
  */
 func ProcessSlashings(state *core.State) error {
 	epoch := shared.GetCurrentEpoch(state)
-	totalBalance := shared.GetTotalActiveStake(state)
+	totalBalance := shared.GetTotalActiveBalance(state)
 	adjustedTotalSlashingBalance := mathutil.Min(
 			shared.SumSlashings(state) * params.ChainConfig.ProportionalSlashingMultiplier,
 			totalBalance,

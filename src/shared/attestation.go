@@ -110,8 +110,8 @@ def get_committee_count_per_slot(state: BeaconState, epoch: Epoch) -> uint64:
  */
 func GetCommitteeCountPerSlot(state *core.State, slot uint64) uint64 {
 	epoch := ComputeEpochAtSlot(slot)
-	bps := GetActiveValidators(state, epoch)
-	committeePerSlot := uint64(len(bps)) / params.ChainConfig.SlotsInEpoch / params.ChainConfig.TargetCommitteeSize
+	validators := GetActiveValidators(state, epoch)
+	committeePerSlot := uint64(len(validators)) / params.ChainConfig.SlotsInEpoch / params.ChainConfig.TargetCommitteeSize
 
 	if committeePerSlot > params.ChainConfig.MaxCommitteesPerSlot {
 		return params.ChainConfig.MaxCommitteesPerSlot
@@ -243,12 +243,12 @@ func GetMatchingTargetAttestations(state *core.State, epoch uint64) ([]*core.Pen
 	}
 
 	ret := []*core.PendingAttestation{}
+	targetRoot, err := GetBlockRoot(state, epoch)
+	if err != nil {
+		return nil, err
+	}
 	for _, att := range source {
-		root, err := GetBlockRoot(state, epoch)
-		if err != nil {
-			return nil, err
-		}
-		if bytes.Equal(att.Data.Target.Root, root) {
+		if bytes.Equal(att.Data.Target.Root, targetRoot) {
 			ret = append(ret, att)
 		}
 	}

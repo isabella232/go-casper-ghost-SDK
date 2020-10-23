@@ -16,7 +16,7 @@ def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
     """
     return Gwei(max(EFFECTIVE_BALANCE_INCREMENT, sum([state.validators[index].effective_balance for index in indices])))
  */
-func GetTotalStake(state *core.State, indices []uint64) uint64 {
+func GetTotalBalance(state *core.State, indices []uint64) uint64 {
 	sum := uint64(0)
 	for _, index := range indices {
 		bp := GetValidator(state, index)
@@ -39,9 +39,9 @@ def get_total_active_balance(state: BeaconState) -> Gwei:
     """
     return get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
  */
-func GetTotalActiveStake(state *core.State) uint64 {
+func GetTotalActiveBalance(state *core.State) uint64 {
 	indices := GetActiveValidators(state, GetCurrentEpoch(state))
-	return GetTotalStake(state, indices)
+	return GetTotalBalance(state, indices)
 }
 
 /**
@@ -51,7 +51,7 @@ def get_base_reward(state: BeaconState, index: ValidatorIndex) -> Gwei:
     return Gwei(effective_balance * BASE_REWARD_FACTOR // integer_squareroot(total_balance) // BASE_REWARDS_PER_EPOCH)
  */
 func GetBaseReward(state *core.State, index uint64) (uint64, error) {
-	totalBalance := GetTotalActiveStake(state)
+	totalBalance := GetTotalActiveBalance(state)
 	if bp := GetValidator(state, index); bp != nil {
 		effectiveBalance := bp.EffectiveBalance
 		return effectiveBalance * params.ChainConfig.BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance), nil
@@ -136,7 +136,7 @@ def get_attestation_component_deltas(state: BeaconState,
 func GetAttestationComponentDeltas(state *core.State, attestations []*core.PendingAttestation) ([]uint64, []uint64, error) {
 	rewards := uint64ZeroArray(uint64(len(state.Validators)))
 	penalties := uint64ZeroArray(uint64(len(state.Validators)))
-	totalStake := GetTotalActiveStake(state)
+	totalStake := GetTotalActiveBalance(state)
 	unslashedAttestingIndices, err := GetUnslashedAttestingIndices(state, attestations)
 	if err != nil {
 		return nil, nil, err
@@ -146,7 +146,7 @@ func GetAttestationComponentDeltas(state *core.State, attestations []*core.Pendi
 		unslashedAttestingIndicesMap[i] = true
 	}
 
-	attestingBalance := GetTotalStake(state, unslashedAttestingIndices)
+	attestingBalance := GetTotalBalance(state, unslashedAttestingIndices)
 
 	for _, index := range GetEligibleBpIndices(state) {
 		if unslashedAttestingIndicesMap[index] {
@@ -413,6 +413,22 @@ func GetAttestationDeltas(state *core.State) ([]uint64, []uint64, error) {
 	}
 
 	return rewards, penalties, nil
+}
+
+/**
+def get_attesting_balance(state: BeaconState, attestations: Sequence[PendingAttestation]) -> Gwei:
+    """
+    Return the combined effective balance of the set of unslashed validators participating in ``attestations``.
+    Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    """
+    return get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
+*/
+func GetAttestingBalances(state *core.State, attestations []*core.PendingAttestation) (uint64, error) {
+	indices, err := GetUnslashedAttestingIndices(state, attestations)
+	if err != nil {
+		return 0, err
+	}
+	return GetTotalBalance(state, indices), nil
 }
 
 func uint64ZeroArray(len uint64) []uint64 {

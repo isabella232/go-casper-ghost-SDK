@@ -11,7 +11,7 @@ def compute_epoch_at_slot(slot: Slot) -> Epoch:
     """
     Return the epoch number at ``slot``.
     """
-    return Epoch(slot // SLOTS_PER_EPOCH)v
+    return Epoch(slot // SLOTS_PER_EPOCH)
  */
 func ComputeEpochAtSlot(slot uint64) uint64 {
 	return slot/ params.ChainConfig.SlotsInEpoch
