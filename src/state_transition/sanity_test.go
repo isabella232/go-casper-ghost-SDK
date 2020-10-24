@@ -13,7 +13,7 @@ func TestSanity(t *testing.T) {
 			0,
 		)
 	ctx.PopulateGenesisValidator(params.ChainConfig.MinGenesisActiveValidatorCount)
-	ctx.ProgressSlotsAndEpochs(128, 9, 10)
+	ctx.ProgressSlotsAndEpochs(128, 1, 2)
 
 	fmt.Printf("")
 }

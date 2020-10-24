@@ -44,12 +44,11 @@ func CopyState(state *core.State) *core.State {
 
 	ret.Validators = make([]*core.Validator, len(state.Validators))
 	for i, bp := range state.Validators {
-		ret.Validators[i] = bp // TODO - state copy (validators) copying issue
-		//ret.Validators[i] = &core.Validator{}
-		//err := deepcopier.Copy(bp).To(ret.Validators[i])
-		//if err != nil {
-		//	log.Fatal(err)
-		//}
+		ret.Validators[i] = &core.Validator{}
+		err := deepcopier.Copy(bp).To(ret.Validators[i])
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	ret.Balances = make([]uint64, len(state.Balances))

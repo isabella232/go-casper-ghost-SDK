@@ -328,12 +328,14 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		log.Printf("sign: %f\n", sign.Sub(compu).Seconds())
 
 		// execute
-		c.State, err = st.ExecuteStateTransition(c.State, &core.SignedBlock{
+		newState, err := st.ExecuteStateTransition(c.State, &core.SignedBlock{
 			Block:                block,
 			Signature:            sig.Serialize(),
 		})
 		if err != nil {
 			log.Fatal(err)
+		} else {
+			c.State = newState
 		}
 
 		exe := time.Now()

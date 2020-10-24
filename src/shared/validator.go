@@ -107,6 +107,7 @@ func ComputeProposerIndex(state *core.State, indices []uint64, seed []byte) (uin
 		if effectiveBalance * maxRandomByte >= params.ChainConfig.MaxEffectiveBalance * uint64(randomByte) {
 			return candidateIndex, nil
 		}
+		i++
 	}
 }
 
