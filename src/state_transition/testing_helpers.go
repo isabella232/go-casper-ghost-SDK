@@ -234,14 +234,6 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		log.Fatal(err)
 	}
 	for i := 0 ; i < maxBlocks ; i++ {
-		if uint64(i) % params.ChainConfig.SlotsInEpoch == 0 {
-			str := "\n\n#########\nEpoch %d\n"
-			str += "Pre justified epoch: %d\n"
-			str += "Current justified epoch: %d\n"
-			str += "Finalized epoch: %d\n"
-			str += "#########\n\n"
-			log.Printf(str, shared.ComputeEpochAtSlot(uint64(i)), c.State.PreviousJustifiedCheckpoint.Epoch, c.State.CurrentJustifiedCheckpoint.Epoch, c.State.FinalizedCheckpoint.Epoch)
-		}
 		log.Printf("progressing block %d\n", i)
 
 		start := time.Now()
@@ -350,6 +342,16 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		// copy to previousBlockRoot
 		previousBlockHeader = &core.BlockHeader{}
 		deepcopier.Copy(c.State.LatestBlockHeader).To(previousBlockHeader)
+
+		// Print epoch summary.
+		if uint64(i + 1) % params.ChainConfig.SlotsInEpoch == 0 {
+			str := "\n\n#########\nEpoch %d\n"
+			str += "Pre justified epoch: %d\n"
+			str += "Current justified epoch: %d\n"
+			str += "Finalized epoch: %d\n"
+			str += "#########\n\n"
+			log.Printf(str, shared.ComputeEpochAtSlot(uint64(i)), c.State.PreviousJustifiedCheckpoint.Epoch, c.State.CurrentJustifiedCheckpoint.Epoch, c.State.FinalizedCheckpoint.Epoch)
+		}
 	}
 	return c
 }
@@ -381,15 +383,14 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 			Slot:                 slot - 1,
 			CommitteeIndex:       i,
 			BeaconBlockRoot:      nextStateCopy.LatestBlockHeader.BodyRoot,
-			Source:               &core.Checkpoint{
-				Epoch:                0,
-				Root:                 state.CurrentJustifiedCheckpoint.Root,
-			},
+			Source:               &core.Checkpoint{},
 			Target:               &core.Checkpoint{
 				Epoch:                slotEpoch,
 				Root:                 targetRoot,
 			},
 		}
+		deepcopier.Copy(state.CurrentJustifiedCheckpoint).To(data.Source)
+
 		// root
 		root, err := ssz.HashTreeRoot(data)
 		if err != nil {
