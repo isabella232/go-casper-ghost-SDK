@@ -14,32 +14,6 @@ const totalSize = seedSize + roundSize + positionWindowSize
 
 var maxShuffleListSize uint64 = 1 << 31
 
-// ShuffledIndex returns `p(index)` in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
-// We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
-// constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
-// on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-func ShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffleRoundCount uint64) (uint64, error) {
-	return computeShuffledIndex(index, indexCount, seed, true /* shuffle */, shuffleRoundCount)
-}
-
-// ShuffleList returns list of shuffled indexes in a pseudorandom permutation `p` of `0...list_size - 1` with ``seed`` as entropy.
-// We utilize 'swap or not' shuffling in this implementation; we are allocating the memory with the seed that stays
-// constant between iterations instead of reallocating it each iteration as in the spec. This implementation is based
-// on the original implementation from protolambda, https://github.com/protolambda/eth2-shuffle
-//  improvements:
-//   - seed is always the first 32 bytes of the hash input, we just copy it into the buffer one time.
-//   - add round byte to seed and hash that part of the buffer.
-//   - split up the for-loop in two:
-//    1. Handle the part from 0 (incl) to pivot (incl). This is mirrored around (pivot / 2).
-//    2. Handle the part from pivot (excl) to N (excl). This is mirrored around ((pivot / 2) + (size/2)).
-//   - hash source every 256 iterations.
-//   - change byteV every 8 iterations.
-//   - we start at the edges, and work back to the mirror point.
-//     this makes us process each pear exactly once (instead of unnecessarily twice, like in the spec).
-func ShuffleList(input []uint64, seed [32]byte, shuffleRoundCount uint64) ([]uint64, error) {
-	return innerShuffleList(input, seed, true /* shuffle */, shuffleRoundCount)
-}
-
 // computeShuffledIndex returns the shuffled validator index corresponding to seed and index count.
 // Spec pseudocode definition:
 //   def compute_shuffled_index(index: ValidatorIndex, index_count: uint64, seed: Hash) -> ValidatorIndex:
@@ -121,63 +95,6 @@ func computeShuffledIndex(index uint64, indexCount uint64, seed [32]byte, shuffl
 		}
 	}
 	return index, nil
-}
-
-
-// shuffles or unshuffles, shuffle=false to un-shuffle.
-func innerShuffleList(input []uint64, seed [32]byte, shuffle bool, shuffleRoundCount uint64) ([]uint64, error) {
-	if len(input) <= 1 {
-		return input, nil
-	}
-	if uint64(len(input)) > maxShuffleListSize {
-		return nil, fmt.Errorf("list size %d out of bounds",
-			len(input))
-	}
-	rounds := uint8(shuffleRoundCount)
-	hashfunc := sha256.Sum256
-	if rounds == 0 {
-		return input, nil
-	}
-	listSize := uint64(len(input))
-	buf := make([]byte, totalSize, totalSize)
-	r := uint8(0)
-	if !shuffle {
-		r = rounds - 1
-	}
-	copy(buf[:seedSize], seed[:])
-	for {
-		buf[seedSize] = r
-		ph := hashfunc(buf[:pivotViewSize])
-		pivot := fromBytes8(ph[:8]) % listSize
-		mirror := (pivot + 1) >> 1
-		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(pivot>>8))
-		source := hashfunc(buf)
-		byteV := source[(pivot&0xff)>>3]
-		for i, j := uint64(0), pivot; i < mirror; i, j = i+1, j-1 {
-			byteV, source = swapOrNot(buf, byteV, i, input, j, source, hashfunc)
-		}
-		// Now repeat, but for the part after the pivot.
-		mirror = (pivot + listSize + 1) >> 1
-		end := listSize - 1
-		binary.LittleEndian.PutUint32(buf[pivotViewSize:], uint32(end>>8))
-		source = hashfunc(buf)
-		byteV = source[(end&0xff)>>3]
-		for i, j := pivot+1, end; i < mirror; i, j = i+1, j-1 {
-			byteV, source = swapOrNot(buf, byteV, i, input, j, source, hashfunc)
-		}
-		if shuffle {
-			r++
-			if r == rounds {
-				break
-			}
-		} else {
-			if r == 0 {
-				break
-			}
-			r--
-		}
-	}
-	return input, nil
 }
 
 // swapOrNot describes the main algorithm behind the shuffle where we swap bytes in the inputted value

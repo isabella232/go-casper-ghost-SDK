@@ -89,7 +89,7 @@ func ComputeProposerIndex(state *core.State, indices []uint64, seed []byte) (uin
 	i := uint64(0)
 	total := uint64(len(indices))
 	for {
-		idx, err := computeShuffledIndex(i % total, total, bytesutil.ToBytes32(seed), true,params.ChainConfig.ShuffleRoundCount) // TODO - shuffle round via config
+		idx, err := computeShuffledIndex(i % total, total, bytesutil.ToBytes32(seed), true, params.ChainConfig.ShuffleRoundCount)
 		if err != nil {
 			return 0, err
 		}

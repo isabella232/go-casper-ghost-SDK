@@ -12,7 +12,6 @@ func minimalTestingConfig() *core.ChainConfig {
 		log.Fatal(err)
 	}
 
-	//ret.MaxCommitteesPerSlot = 4
 	ret.TargetCommitteeSize = 4
 	ret.SlotsInEpoch = 4
 	ret.MinGenesisActiveValidatorCount = ret.TargetCommitteeSize * ret.SlotsInEpoch
