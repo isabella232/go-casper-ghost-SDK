@@ -9,49 +9,52 @@ import "src/core/attestation.proto";
 
 message State {
     // versioning
-    uint64 GenesisTime = 10;
-    uint64 Slot = 11;
-    BlockHeader LatestBlockHeader = 12;
-    Fork Fork = 13;
+    uint64 genesis_time = 1001;
+    bytes genesis_validators_root = 1002 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    uint64 slot = 1003;
+    Fork fork = 1004;
 
-    // past
-    repeated bytes BlockRoots = 21 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"8192\""];
-    repeated bytes StateRoots = 22 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"8192\""];
-    repeated bytes RandaoMix = 24 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"65536\""];
-    repeated bytes HistoricalRoots = 25 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"16777216\""];
-    bytes GenesisValidatorsRoot = 26 [(gogoproto.moretags) = "ssz-size:\"32\""];;
+    // history
+    BlockHeader latest_block_header = 2001;
+    repeated bytes block_roots = 2002 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+    repeated bytes state_roots = 2003 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+    repeated bytes historical_roots = 2004 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"16777216\""];
 
-    // Finalization & justification
-    repeated PendingAttestation PreviousEpochAttestations = 31 [(gogoproto.moretags) = "ssz-max:\"1024\""];
-    repeated PendingAttestation CurrentEpochAttestations = 32 [(gogoproto.moretags) = "ssz-max:\"1024\""];
-    bytes JustificationBits = 33 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
-    Checkpoint PreviousJustifiedCheckpoint = 34;
-    Checkpoint CurrentJustifiedCheckpoint = 35;
-    Checkpoint FinalizedCheckpoint = 36;
+    // eth1
+    ETH1Data eth1_data = 3001;
+    repeated ETH1Data eth1_data_votes = 3002 [(gogoproto.moretags) = "ssz-max:\"1024\""];
+    uint64 eth1_deposit_index = 3003;
 
-    // eth 1
-    ETH1Data Eth1Data = 40;
-    repeated ETH1Data Eth1DataVotes = 41 [(gogoproto.moretags) = "ssz-max:\"1024\""];
-    uint64 Eth1DepositIndex = 42;
+    // registry
+    repeated Validator validators = 4001 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
+    repeated uint64 balances = 4002 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
 
-    // network
-    repeated Validator Validators = 50 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
-    repeated uint64 Balances = 51 [(gogoproto.moretags) = "ssz-max:\"1099511627776\""];
+    // randomness
+    repeated bytes randao_mixes = 5001 [(gogoproto.moretags) = "ssz-size:\"65536,32\""];
 
     // slashings
-    repeated uint64 Slashings = 60 [(gogoproto.moretags) = "ssz-max:\"8192\""];
+    repeated uint64 slashings = 6001 [(gogoproto.moretags) = "ssz-size:\"8192\""];
+
+    // attestations
+    repeated PendingAttestation previous_epoch_attestations = 7001 [(gogoproto.moretags) = "ssz-max:\"1024\""];
+    repeated PendingAttestation current_epoch_attestations = 7002 [(gogoproto.moretags) = "ssz-max:\"1024\""];
+
+    // finality
+    bytes justification_bits = 8001 [(gogoproto.moretags) = "ssz-size:\"1\"", (gogoproto.casttype) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
+    Checkpoint previous_justified_checkpoint = 8002;
+    Checkpoint current_justified_checkpoint = 8003;
+    Checkpoint finalized_checkpoint = 8004;
 }
 
 message Validator {
-    bytes PubKey = 2 [(gogoproto.moretags) = "ssz-size:\"48\""];
-    uint64 EffectiveBalance = 3; // In ETH
-    bool Slashed = 5;
-    bool Active = 6; // TODO - spec doesn't include BP active
-    uint64 ExitEpoch = 7;
-    uint64 ActivationEpoch = 8;
-    uint64 ActivationEligibilityEpoch = 9;
-    uint64 WithdrawableEpoch = 10;
-    bytes WithdrawalCredentials = 11 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes public_key = 2 [(gogoproto.moretags) = "ssz-size:\"48\"  spec-name:\"pubkey\""];
+    uint64 effective_balance = 3; // In ETH
+    bool slashed = 5;
+    uint64 exit_epoch = 7;
+    uint64 activation_epoch = 8;
+    uint64 activation_eligibility_epoch = 9;
+    uint64 withdrawable_epoch = 10;
+    bytes withdrawal_credentials = 11 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
 message StateCommitment {
@@ -69,11 +72,11 @@ message Fork {
 }
 
 message ForkData {
-    bytes CurrentVersion = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
-    bytes GenesisValidatorRoot = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes current_version = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
+    bytes genesis_validators_root = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
 message HistoricalBatch {
-    repeated bytes BlockRoots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"8192\""];
-    repeated bytes StateRoots = 2 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"8192\""];
+    repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"8192\""];
+    repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"8192\""];
 }

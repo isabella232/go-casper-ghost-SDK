@@ -32,3 +32,6 @@ password.txt
 
 # Dist files
 dist
+
+# temporary folders
+.temp

@@ -157,10 +157,9 @@ func GetValidatorFromDeposit(state *core.State, deposit *core.Deposit) *core.Val
 	effBalance := mathutil.Min(amount - amount % params.ChainConfig.EffectiveBalanceIncrement, params.ChainConfig.MaxEffectiveBalance)
 
 	return &core.Validator {
-		PubKey:                     deposit.Data.PublicKey,
+		PublicKey:                     deposit.Data.PublicKey,
 		EffectiveBalance:           effBalance,
 		Slashed:                    false,
-		Active:                     true,
 		ExitEpoch:                  params.ChainConfig.FarFutureEpoch,
 		ActivationEpoch:            params.ChainConfig.FarFutureEpoch,
 		ActivationEligibilityEpoch: params.ChainConfig.FarFutureEpoch,
