@@ -5,6 +5,217 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 )
 
+// MarshalSSZ ssz marshals the BlockHeader object
+func (b *BlockHeader) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(b)
+}
+
+// MarshalSSZTo ssz marshals the BlockHeader object to a target array
+func (b *BlockHeader) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'Slot'
+	dst = ssz.MarshalUint64(dst, b.Slot)
+
+	// Field (1) 'ProposerIndex'
+	dst = ssz.MarshalUint64(dst, b.ProposerIndex)
+
+	// Field (2) 'ParentRoot'
+	if len(b.ParentRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, b.ParentRoot...)
+
+	// Field (3) 'StateRoot'
+	if len(b.StateRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, b.StateRoot...)
+
+	// Field (4) 'BodyRoot'
+	if len(b.BodyRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, b.BodyRoot...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the BlockHeader object
+func (b *BlockHeader) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 112 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'Slot'
+	b.Slot = ssz.UnmarshallUint64(buf[0:8])
+
+	// Field (1) 'ProposerIndex'
+	b.ProposerIndex = ssz.UnmarshallUint64(buf[8:16])
+
+	// Field (2) 'ParentRoot'
+	if cap(b.ParentRoot) == 0 {
+		b.ParentRoot = make([]byte, 0, len(buf[16:48]))
+	}
+	b.ParentRoot = append(b.ParentRoot, buf[16:48]...)
+
+	// Field (3) 'StateRoot'
+	if cap(b.StateRoot) == 0 {
+		b.StateRoot = make([]byte, 0, len(buf[48:80]))
+	}
+	b.StateRoot = append(b.StateRoot, buf[48:80]...)
+
+	// Field (4) 'BodyRoot'
+	if cap(b.BodyRoot) == 0 {
+		b.BodyRoot = make([]byte, 0, len(buf[80:112]))
+	}
+	b.BodyRoot = append(b.BodyRoot, buf[80:112]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the BlockHeader object
+func (b *BlockHeader) SizeSSZ() (size int) {
+	size = 112
+	return
+}
+
+// HashTreeRoot ssz hashes the BlockHeader object
+func (b *BlockHeader) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(b)
+}
+
+// HashTreeRootWith ssz hashes the BlockHeader object with a hasher
+func (b *BlockHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'Slot'
+	hh.PutUint64(b.Slot)
+
+	// Field (1) 'ProposerIndex'
+	hh.PutUint64(b.ProposerIndex)
+
+	// Field (2) 'ParentRoot'
+	if len(b.ParentRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(b.ParentRoot)
+
+	// Field (3) 'StateRoot'
+	if len(b.StateRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(b.StateRoot)
+
+	// Field (4) 'BodyRoot'
+	if len(b.BodyRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(b.BodyRoot)
+
+	hh.Merkleize(indx)
+	return
+}
+
+// MarshalSSZ ssz marshals the ETH1Data object
+func (e *ETH1Data) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(e)
+}
+
+// MarshalSSZTo ssz marshals the ETH1Data object to a target array
+func (e *ETH1Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'DepositRoot'
+	if len(e.DepositRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.DepositRoot...)
+
+	// Field (1) 'DepositCount'
+	dst = ssz.MarshalUint64(dst, e.DepositCount)
+
+	// Field (2) 'BlockHash'
+	if len(e.BlockHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, e.BlockHash...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the ETH1Data object
+func (e *ETH1Data) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 72 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'DepositRoot'
+	if cap(e.DepositRoot) == 0 {
+		e.DepositRoot = make([]byte, 0, len(buf[0:32]))
+	}
+	e.DepositRoot = append(e.DepositRoot, buf[0:32]...)
+
+	// Field (1) 'DepositCount'
+	e.DepositCount = ssz.UnmarshallUint64(buf[32:40])
+
+	// Field (2) 'BlockHash'
+	if cap(e.BlockHash) == 0 {
+		e.BlockHash = make([]byte, 0, len(buf[40:72]))
+	}
+	e.BlockHash = append(e.BlockHash, buf[40:72]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the ETH1Data object
+func (e *ETH1Data) SizeSSZ() (size int) {
+	size = 72
+	return
+}
+
+// HashTreeRoot ssz hashes the ETH1Data object
+func (e *ETH1Data) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(e)
+}
+
+// HashTreeRootWith ssz hashes the ETH1Data object with a hasher
+func (e *ETH1Data) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'DepositRoot'
+	if len(e.DepositRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.DepositRoot)
+
+	// Field (1) 'DepositCount'
+	hh.PutUint64(e.DepositCount)
+
+	// Field (2) 'BlockHash'
+	if len(e.BlockHash) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(e.BlockHash)
+
+	hh.Merkleize(indx)
+	return
+}
+
 // MarshalSSZ ssz marshals the PendingAttestation object
 func (p *PendingAttestation) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(p)
@@ -650,7 +861,7 @@ func (s *State) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (15) 'PreviousEpochAttestations'
-	if len(s.PreviousEpochAttestations) > 1024 {
+	if len(s.PreviousEpochAttestations) > 4096 {
 		err = ssz.ErrListTooBig
 		return
 	}
@@ -668,7 +879,7 @@ func (s *State) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (16) 'CurrentEpochAttestations'
-	if len(s.CurrentEpochAttestations) > 1024 {
+	if len(s.CurrentEpochAttestations) > 4096 {
 		err = ssz.ErrListTooBig
 		return
 	}
@@ -899,7 +1110,7 @@ func (s *State) UnmarshalSSZ(buf []byte) error {
 	// Field (15) 'PreviousEpochAttestations'
 	{
 		buf = tail[o15:o16]
-		num, err := ssz.DecodeDynamicLength(buf, 1024)
+		num, err := ssz.DecodeDynamicLength(buf, 4096)
 		if err != nil {
 			return err
 		}
@@ -921,7 +1132,7 @@ func (s *State) UnmarshalSSZ(buf []byte) error {
 	// Field (16) 'CurrentEpochAttestations'
 	{
 		buf = tail[o16:]
-		num, err := ssz.DecodeDynamicLength(buf, 1024)
+		num, err := ssz.DecodeDynamicLength(buf, 4096)
 		if err != nil {
 			return err
 		}
@@ -1146,7 +1357,7 @@ func (s *State) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	{
 		subIndx := hh.Index()
 		num := uint64(len(s.PreviousEpochAttestations))
-		if num > 1024 {
+		if num > 4096 {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
@@ -1155,14 +1366,14 @@ func (s *State) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		hh.MerkleizeWithMixin(subIndx, num, 1024)
+		hh.MerkleizeWithMixin(subIndx, num, 4096)
 	}
 
 	// Field (16) 'CurrentEpochAttestations'
 	{
 		subIndx := hh.Index()
 		num := uint64(len(s.CurrentEpochAttestations))
-		if num > 1024 {
+		if num > 4096 {
 			err = ssz.ErrIncorrectListSize
 			return
 		}
@@ -1171,7 +1382,7 @@ func (s *State) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 				return
 			}
 		}
-		hh.MerkleizeWithMixin(subIndx, num, 1024)
+		hh.MerkleizeWithMixin(subIndx, num, 4096)
 	}
 
 	// Field (17) 'JustificationBits'
@@ -1216,30 +1427,30 @@ func (v *Validator) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 	dst = append(dst, v.PublicKey...)
 
-	// Field (1) 'EffectiveBalance'
-	dst = ssz.MarshalUint64(dst, v.EffectiveBalance)
-
-	// Field (2) 'Slashed'
-	dst = ssz.MarshalBool(dst, v.Slashed)
-
-	// Field (3) 'ExitEpoch'
-	dst = ssz.MarshalUint64(dst, v.ExitEpoch)
-
-	// Field (4) 'ActivationEpoch'
-	dst = ssz.MarshalUint64(dst, v.ActivationEpoch)
-
-	// Field (5) 'ActivationEligibilityEpoch'
-	dst = ssz.MarshalUint64(dst, v.ActivationEligibilityEpoch)
-
-	// Field (6) 'WithdrawableEpoch'
-	dst = ssz.MarshalUint64(dst, v.WithdrawableEpoch)
-
-	// Field (7) 'WithdrawalCredentials'
+	// Field (1) 'WithdrawalCredentials'
 	if len(v.WithdrawalCredentials) != 32 {
 		err = ssz.ErrBytesLength
 		return
 	}
 	dst = append(dst, v.WithdrawalCredentials...)
+
+	// Field (2) 'EffectiveBalance'
+	dst = ssz.MarshalUint64(dst, v.EffectiveBalance)
+
+	// Field (3) 'Slashed'
+	dst = ssz.MarshalBool(dst, v.Slashed)
+
+	// Field (4) 'ActivationEligibilityEpoch'
+	dst = ssz.MarshalUint64(dst, v.ActivationEligibilityEpoch)
+
+	// Field (5) 'ActivationEpoch'
+	dst = ssz.MarshalUint64(dst, v.ActivationEpoch)
+
+	// Field (6) 'ExitEpoch'
+	dst = ssz.MarshalUint64(dst, v.ExitEpoch)
+
+	// Field (7) 'WithdrawableEpoch'
+	dst = ssz.MarshalUint64(dst, v.WithdrawableEpoch)
 
 	return
 }
@@ -1258,29 +1469,29 @@ func (v *Validator) UnmarshalSSZ(buf []byte) error {
 	}
 	v.PublicKey = append(v.PublicKey, buf[0:48]...)
 
-	// Field (1) 'EffectiveBalance'
-	v.EffectiveBalance = ssz.UnmarshallUint64(buf[48:56])
-
-	// Field (2) 'Slashed'
-	v.Slashed = ssz.UnmarshalBool(buf[56:57])
-
-	// Field (3) 'ExitEpoch'
-	v.ExitEpoch = ssz.UnmarshallUint64(buf[57:65])
-
-	// Field (4) 'ActivationEpoch'
-	v.ActivationEpoch = ssz.UnmarshallUint64(buf[65:73])
-
-	// Field (5) 'ActivationEligibilityEpoch'
-	v.ActivationEligibilityEpoch = ssz.UnmarshallUint64(buf[73:81])
-
-	// Field (6) 'WithdrawableEpoch'
-	v.WithdrawableEpoch = ssz.UnmarshallUint64(buf[81:89])
-
-	// Field (7) 'WithdrawalCredentials'
+	// Field (1) 'WithdrawalCredentials'
 	if cap(v.WithdrawalCredentials) == 0 {
-		v.WithdrawalCredentials = make([]byte, 0, len(buf[89:121]))
+		v.WithdrawalCredentials = make([]byte, 0, len(buf[48:80]))
 	}
-	v.WithdrawalCredentials = append(v.WithdrawalCredentials, buf[89:121]...)
+	v.WithdrawalCredentials = append(v.WithdrawalCredentials, buf[48:80]...)
+
+	// Field (2) 'EffectiveBalance'
+	v.EffectiveBalance = ssz.UnmarshallUint64(buf[80:88])
+
+	// Field (3) 'Slashed'
+	v.Slashed = ssz.UnmarshalBool(buf[88:89])
+
+	// Field (4) 'ActivationEligibilityEpoch'
+	v.ActivationEligibilityEpoch = ssz.UnmarshallUint64(buf[89:97])
+
+	// Field (5) 'ActivationEpoch'
+	v.ActivationEpoch = ssz.UnmarshallUint64(buf[97:105])
+
+	// Field (6) 'ExitEpoch'
+	v.ExitEpoch = ssz.UnmarshallUint64(buf[105:113])
+
+	// Field (7) 'WithdrawableEpoch'
+	v.WithdrawableEpoch = ssz.UnmarshallUint64(buf[113:121])
 
 	return err
 }
@@ -1307,30 +1518,30 @@ func (v *Validator) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 	hh.PutBytes(v.PublicKey)
 
-	// Field (1) 'EffectiveBalance'
-	hh.PutUint64(v.EffectiveBalance)
-
-	// Field (2) 'Slashed'
-	hh.PutBool(v.Slashed)
-
-	// Field (3) 'ExitEpoch'
-	hh.PutUint64(v.ExitEpoch)
-
-	// Field (4) 'ActivationEpoch'
-	hh.PutUint64(v.ActivationEpoch)
-
-	// Field (5) 'ActivationEligibilityEpoch'
-	hh.PutUint64(v.ActivationEligibilityEpoch)
-
-	// Field (6) 'WithdrawableEpoch'
-	hh.PutUint64(v.WithdrawableEpoch)
-
-	// Field (7) 'WithdrawalCredentials'
+	// Field (1) 'WithdrawalCredentials'
 	if len(v.WithdrawalCredentials) != 32 {
 		err = ssz.ErrBytesLength
 		return
 	}
 	hh.PutBytes(v.WithdrawalCredentials)
+
+	// Field (2) 'EffectiveBalance'
+	hh.PutUint64(v.EffectiveBalance)
+
+	// Field (3) 'Slashed'
+	hh.PutBool(v.Slashed)
+
+	// Field (4) 'ActivationEligibilityEpoch'
+	hh.PutUint64(v.ActivationEligibilityEpoch)
+
+	// Field (5) 'ActivationEpoch'
+	hh.PutUint64(v.ActivationEpoch)
+
+	// Field (6) 'ExitEpoch'
+	hh.PutUint64(v.ExitEpoch)
+
+	// Field (7) 'WithdrawableEpoch'
+	hh.PutUint64(v.WithdrawableEpoch)
 
 	hh.Merkleize(indx)
 	return
@@ -1668,217 +1879,6 @@ func (h *HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 		numItems := uint64(len(h.StateRoots))
 		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(8192, numItems, 32))
 	}
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the BlockHeader object
-func (b *BlockHeader) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(b)
-}
-
-// MarshalSSZTo ssz marshals the BlockHeader object to a target array
-func (b *BlockHeader) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'Slot'
-	dst = ssz.MarshalUint64(dst, b.Slot)
-
-	// Field (1) 'ProposerIndex'
-	dst = ssz.MarshalUint64(dst, b.ProposerIndex)
-
-	// Field (2) 'ParentRoot'
-	if len(b.ParentRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.ParentRoot...)
-
-	// Field (3) 'StateRoot'
-	if len(b.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.StateRoot...)
-
-	// Field (4) 'BodyRoot'
-	if len(b.BodyRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.BodyRoot...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the BlockHeader object
-func (b *BlockHeader) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 112 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'Slot'
-	b.Slot = ssz.UnmarshallUint64(buf[0:8])
-
-	// Field (1) 'ProposerIndex'
-	b.ProposerIndex = ssz.UnmarshallUint64(buf[8:16])
-
-	// Field (2) 'ParentRoot'
-	if cap(b.ParentRoot) == 0 {
-		b.ParentRoot = make([]byte, 0, len(buf[16:48]))
-	}
-	b.ParentRoot = append(b.ParentRoot, buf[16:48]...)
-
-	// Field (3) 'StateRoot'
-	if cap(b.StateRoot) == 0 {
-		b.StateRoot = make([]byte, 0, len(buf[48:80]))
-	}
-	b.StateRoot = append(b.StateRoot, buf[48:80]...)
-
-	// Field (4) 'BodyRoot'
-	if cap(b.BodyRoot) == 0 {
-		b.BodyRoot = make([]byte, 0, len(buf[80:112]))
-	}
-	b.BodyRoot = append(b.BodyRoot, buf[80:112]...)
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the BlockHeader object
-func (b *BlockHeader) SizeSSZ() (size int) {
-	size = 112
-	return
-}
-
-// HashTreeRoot ssz hashes the BlockHeader object
-func (b *BlockHeader) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(b)
-}
-
-// HashTreeRootWith ssz hashes the BlockHeader object with a hasher
-func (b *BlockHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'Slot'
-	hh.PutUint64(b.Slot)
-
-	// Field (1) 'ProposerIndex'
-	hh.PutUint64(b.ProposerIndex)
-
-	// Field (2) 'ParentRoot'
-	if len(b.ParentRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.ParentRoot)
-
-	// Field (3) 'StateRoot'
-	if len(b.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.StateRoot)
-
-	// Field (4) 'BodyRoot'
-	if len(b.BodyRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.BodyRoot)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the ETH1Data object
-func (e *ETH1Data) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(e)
-}
-
-// MarshalSSZTo ssz marshals the ETH1Data object to a target array
-func (e *ETH1Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'DepositRoot'
-	if len(e.DepositRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, e.DepositRoot...)
-
-	// Field (1) 'DepositCount'
-	dst = ssz.MarshalUint64(dst, e.DepositCount)
-
-	// Field (2) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, e.BlockHash...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the ETH1Data object
-func (e *ETH1Data) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 72 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'DepositRoot'
-	if cap(e.DepositRoot) == 0 {
-		e.DepositRoot = make([]byte, 0, len(buf[0:32]))
-	}
-	e.DepositRoot = append(e.DepositRoot, buf[0:32]...)
-
-	// Field (1) 'DepositCount'
-	e.DepositCount = ssz.UnmarshallUint64(buf[32:40])
-
-	// Field (2) 'BlockHash'
-	if cap(e.BlockHash) == 0 {
-		e.BlockHash = make([]byte, 0, len(buf[40:72]))
-	}
-	e.BlockHash = append(e.BlockHash, buf[40:72]...)
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the ETH1Data object
-func (e *ETH1Data) SizeSSZ() (size int) {
-	size = 72
-	return
-}
-
-// HashTreeRoot ssz hashes the ETH1Data object
-func (e *ETH1Data) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(e)
-}
-
-// HashTreeRootWith ssz hashes the ETH1Data object with a hasher
-func (e *ETH1Data) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'DepositRoot'
-	if len(e.DepositRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.DepositRoot)
-
-	// Field (1) 'DepositCount'
-	hh.PutUint64(e.DepositCount)
-
-	// Field (2) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.BlockHash)
 
 	hh.Merkleize(indx)
 	return
