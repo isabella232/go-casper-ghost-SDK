@@ -400,7 +400,7 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 		}
 
 		// sign
-		indices, err := shared.GetAttestationCommittee(nextStateCopy, slot-1, i)
+		indices, err := shared.GetBeaconCommittee(nextStateCopy, slot-1, i)
 		if err != nil {
 			log.Fatalf("populateAttestations: %s", err.Error())
 		}

@@ -1187,3 +1187,85 @@ func (h *HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.Merkleize(indx)
 	return
 }
+
+// MarshalSSZ ssz marshals the SigningRoot object
+func (s *SigningRoot) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(s)
+}
+
+// MarshalSSZTo ssz marshals the SigningRoot object to a target array
+func (s *SigningRoot) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'ObjectRoot'
+	if len(s.ObjectRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, s.ObjectRoot...)
+
+	// Field (1) 'Domain'
+	if len(s.Domain) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	dst = append(dst, s.Domain...)
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the SigningRoot object
+func (s *SigningRoot) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 64 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'ObjectRoot'
+	if cap(s.ObjectRoot) == 0 {
+		s.ObjectRoot = make([]byte, 0, len(buf[0:32]))
+	}
+	s.ObjectRoot = append(s.ObjectRoot, buf[0:32]...)
+
+	// Field (1) 'Domain'
+	if cap(s.Domain) == 0 {
+		s.Domain = make([]byte, 0, len(buf[32:64]))
+	}
+	s.Domain = append(s.Domain, buf[32:64]...)
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the SigningRoot object
+func (s *SigningRoot) SizeSSZ() (size int) {
+	size = 64
+	return
+}
+
+// HashTreeRoot ssz hashes the SigningRoot object
+func (s *SigningRoot) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(s)
+}
+
+// HashTreeRootWith ssz hashes the SigningRoot object with a hasher
+func (s *SigningRoot) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'ObjectRoot'
+	if len(s.ObjectRoot) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(s.ObjectRoot)
+
+	// Field (1) 'Domain'
+	if len(s.Domain) != 32 {
+		err = ssz.ErrBytesLength
+		return
+	}
+	hh.PutBytes(s.Domain)
+
+	hh.Merkleize(indx)
+	return
+}

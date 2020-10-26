@@ -32,5 +32,5 @@ func GetSeed(state *core.State, epoch uint64, domainType []byte) [32]byte {
 	seed := append(domainType[:], bytesutil.Bytes8(epoch)...)
 	seed = append(seed, randaoMix...)
 
-	return hashutil.Hash(domainType)
+	return hashutil.Hash(seed)
 }

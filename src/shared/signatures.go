@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	ssz2 "github.com/ferranbt/fastssz"
 	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
@@ -136,7 +137,6 @@ func GetDomain(state *core.State, domainType []byte, epoch uint64) ([]byte, erro
 	} else {
 		forkVersion = state.Fork.CurrentVersion
 	}
-
 	return ComputeDomain(domainType, forkVersion, state.GenesisValidatorsRoot)
 }
 
@@ -152,7 +152,7 @@ func GetDomain(state *core.State, domainType []byte, epoch uint64) ([]byte, erro
 //    return GetDomain(domain_type + fork_data_root[:28])
 func ComputeDomain(domainType []byte, forkVersion []byte, genesisValidatorRoot []byte) ([]byte, error) {
 	domainBytes := [4]byte{}
-	copy(domainBytes[:], domainType[0:4])
+	copy(domainBytes[:], domainType[:4])
 
 	if forkVersion == nil {
 		forkVersion = params.ChainConfig.GenesisForkVersion
@@ -162,13 +162,13 @@ func ComputeDomain(domainType []byte, forkVersion []byte, genesisValidatorRoot [
 	}
 	forkBytes := make([]byte, 4)
 	copy(forkBytes[:], forkVersion)
-	forkDataRoot, err := ComputeForkDataRoot(forkVersion, genesisValidatorRoot)
+	forkDataRoot, err := ComputeForkDataRoot(forkBytes, genesisValidatorRoot)
 	if err != nil {
 		return nil, err
 	}
 
 	var b []byte
-	b = append(b, domainType[:4]...)
+	b = append(b, domainBytes[:]...)
 	b = append(b, forkDataRoot[:28]...)
 	return b, nil
 }
@@ -219,13 +219,28 @@ def compute_signing_root(ssz_object: SSZObject, domain: Domain) -> Root:
         domain=domain,
     ))
  */
-func ComputeSigningRoot(obj interface{}, domain []byte) ([32]byte, error) {
-	container := struct {
-		ObjectRoot interface{}
-		Domain []byte
-	}{
-		obj,
-		domain,
+func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
+	if object == nil {
+		return [32]byte{}, fmt.Errorf("cannot compute signing root of nil")
 	}
-	return ssz.HashTreeRoot(container)
+	return signingData(func() ([32]byte, error) {
+		if v, ok := object.(ssz2.HashRoot); ok {
+			return v.HashTreeRoot()
+		}
+		return ssz.HashTreeRoot(object)
+	}, domain)
+}
+
+// Computes the signing data by utilising the provided root function and then
+// returning the signing data of the container object.
+func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
+	objRoot, err := rootFunc()
+	if err != nil {
+		return [32]byte{}, err
+	}
+	container := &core.SigningRoot{
+		ObjectRoot: objRoot[:],
+		Domain:     domain,
+	}
+	return container.HashTreeRoot()
 }

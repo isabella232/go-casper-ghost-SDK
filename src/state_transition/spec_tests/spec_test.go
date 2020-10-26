@@ -1,6 +1,7 @@
 package spec_tests
 
 import (
+	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -47,10 +48,9 @@ func SpecTestFromFolder(t *testing.T, folderPath string, objects ...string) *Spe
 	}
 	for _, obj := range objects {
 		switch obj {
-		case "preState":
-			ret.readPreState()
-		case "serializedState":
-			ret.readSerializedState()
+		case "pre":
+		case "serialized":
+			ret.readPreState(obj)
 		case "attestation":
 			ret.readAttestation()
 		}
@@ -58,15 +58,8 @@ func SpecTestFromFolder(t *testing.T, folderPath string, objects ...string) *Spe
 	return ret
 }
 
-func(test *SpecTest) readPreState() {
-	preByts, err := ioutil.ReadFile(path.Join(test.folderPath, "pre.ssz"))
-	require.NoError(test.t, err)
-	test.preState = &core.State{}
-	require.NoError(test.t, test.preState.UnmarshalSSZ(preByts))
-}
-
-func(test *SpecTest) readSerializedState() {
-	preByts, err := ioutil.ReadFile(path.Join(test.folderPath, "serialized.ssz"))
+func(test *SpecTest) readPreState(fileName string) {
+	preByts, err := ioutil.ReadFile(path.Join(test.folderPath, fmt.Sprintf("%s.ssz", fileName)))
 	require.NoError(test.t, err)
 	test.preState = &core.State{}
 	require.NoError(test.t, test.preState.UnmarshalSSZ(preByts))

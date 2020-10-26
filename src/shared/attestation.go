@@ -136,7 +136,7 @@ def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) 
         count=committees_per_slot * SLOTS_PER_EPOCH,
     )
  */
-func GetAttestationCommittee(state *core.State, slot uint64, index uint64) ([]uint64, error) {
+func GetBeaconCommittee(state *core.State, slot uint64, index uint64) ([]uint64, error) {
 	epoch := ComputeEpochAtSlot(slot)
 	committeesPerSlot := GetCommitteeCountPerSlot(state, slot)
 	seed := GetSeed(state, epoch, params.ChainConfig.DomainBeaconAttester)
@@ -146,6 +146,32 @@ func GetAttestationCommittee(state *core.State, slot uint64, index uint64) ([]ui
 			(slot % params.ChainConfig.SlotsInEpoch) * committeesPerSlot + index,
 			committeesPerSlot * params.ChainConfig.SlotsInEpoch,
 		)
+}
+
+/**
+def get_indexed_attestation(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
+    """
+    Return the indexed attestation corresponding to ``attestation``.
+    """
+    attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bits)
+
+    return IndexedAttestation(
+        attesting_indices=sorted(attesting_indices),
+        data=attestation.data,
+        signature=attestation.signature,
+    )
+ */
+func GetIndexedAttestation(state *core.State, attestation *core.Attestation) (*core.IndexedAttestation, error) {
+	indices, err := GetAttestingIndices(state, attestation.Data, attestation.AggregationBits)
+	if err != nil {
+		return nil, err
+	}
+
+	return &core.IndexedAttestation{
+		AttestingIndices:     indices,
+		Data:                 attestation.Data,
+		Signature:            attestation.Signature,
+	}, nil
 }
 
 /**
@@ -159,12 +185,12 @@ def get_attesting_indices(state: BeaconState,
     return set(index for i, index in enumerate(committee) if bits[i])
  */
 func GetAttestingIndices(state *core.State, data *core.AttestationData, bits bitfield.Bitlist) ([]uint64, error) {
-	committee, err := GetAttestationCommittee(state, data.Slot, data.CommitteeIndex)
+	committee, err := GetBeaconCommittee(state, data.Slot, data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
 	ret := []uint64{}
-	for i := range bits {
+	for i := range bits.BitIndices() {
 		if bits.BitAt(uint64(i)) {
 			ret = append(ret, committee[i])
 		}

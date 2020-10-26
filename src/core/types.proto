@@ -75,3 +75,8 @@ message HistoricalBatch {
     repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
     repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
 }
+
+message SigningRoot {
+    bytes object_root = 1 [(gogoproto.moretags) = "ssz-size:\"32\""];
+    bytes domain = 2 [(gogoproto.moretags) = "ssz-size:\"32\""];
+}
