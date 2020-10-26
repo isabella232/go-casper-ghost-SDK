@@ -24,7 +24,7 @@ func mainnetConfig() *core.ChainConfig {
 		// Time
 		SlotsInEpoch:                32,
 		MinAttestationInclusionDelay: 1,
-		MaxSeedLookahead: 2^2, // 4 epochs
+		MaxSeedLookahead: 4, // 4 epochs
 		MinSeedLookahead: 1, // 1 epoch
 		SlotsPerHistoricalRoot: 1 << 13, // ~27H
 		MinValidatorWithdrawabilityDelay: 1 << 8, // 256 epochs, ~27 hours

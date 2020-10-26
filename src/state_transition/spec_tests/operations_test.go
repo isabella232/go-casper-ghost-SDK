@@ -13,47 +13,99 @@ import (
 	"testing"
 )
 
+var testToSSZObject = map[string]string{
+	"attestation": "attestation",
+	"attester_slashing": "attester_slashing",
+	"block_header": "block",
+	"deposit": "deposit",
+	"proposer_slashing": "proposer_slashing",
+	"voluntary_exit": "voluntary_exit",
+}
+
 func TestSpecOperationsMainnet(t *testing.T) {
 	params.UseMainnetConfig()
 	base, err := os.Getwd()
 	require.NoError(t, err)
 
-	root := path.Join(base, rootSpecTestsFolder,"mainnet/phase0/operations/")
+	root := path.Join(base, rootSpecTestsFolder,"mainnet/phase0/operations")
+	objectsToTest, err := ioutil.ReadDir(root)
+	require.NoError(t, err)
 
-	t.Run("", func(ttt *testing.T) {
-		subDirs := "attestation"
-		subDir := path.Join(root, subDirs, "pyspec_tests/success")
+	for _, testObj := range objectsToTest { // iterate between tests operations/[attestation, attester_slashing..]
+		t.Run(testObj.Name(), func(tt *testing.T) {
+			objDirsPath := path.Join(root, testObj.Name(),"pyspec_tests/")
+			dirs, err := ioutil.ReadDir(objDirsPath)
+			require.NoError(t, err)
 
-		if objFunc, ok := nameToObject[subDirs]; ok && objFunc != nil {
-			// unmarshal pre state
-			preByts, err := ioutil.ReadFile(path.Join(subDir, "pre.ssz"))
-			require.NoError(ttt, err)
-			pre := &core.State{}
-			require.NoError(ttt, pre.UnmarshalSSZ(preByts))
-			// unmarshal post state if exists
-			postByts, err := ioutil.ReadFile(path.Join(subDir, "post.ssz"))
-			post := &core.State{}
-			if err == nil {
-				require.NoError(ttt, post.UnmarshalSSZ(postByts))
+			for _, dir := range dirs { // iterate scenarios, e.g, operations/attestation/after_epoch_slots
+				t.Run(testObj.Name() + "/" + dir.Name(), func(ttt *testing.T) {
+					sszObj, ok := testToSSZObject[testObj.Name()]
+					if !ok {
+						ttt.Skip("could not find ssz object")
+						return
+					}
+					subDir := path.Join(objDirsPath, dir.Name())
+					if objFunc, ok := nameToObject[testObj.Name()]; ok && objFunc != nil {
+						// unmarshal pre state
+						preByts, err := ioutil.ReadFile(path.Join(subDir, "pre.ssz"))
+						require.NoError(ttt, err)
+						pre := &core.State{}
+						require.NoError(ttt, pre.UnmarshalSSZ(preByts))
+						// unmarshal post state if exists
+						postByts, err := ioutil.ReadFile(path.Join(subDir, "post.ssz"))
+						post := &core.State{}
+						if err == nil {
+							require.NoError(ttt, post.UnmarshalSSZ(postByts))
+						} else {
+							post = nil
+						}
+
+						// unmarshal object
+						obj := objFunc()
+						byts, err := ioutil.ReadFile(path.Join(subDir, fmt.Sprintf("%s.ssz",sszObj)))
+						require.NoError(ttt, err)
+						require.NoError(ttt, obj.(ssz.Unmarshaler).UnmarshalSSZ(byts))
+
+						if dir.Name() == "invalid_multiple_blocks_single_slot" {
+							fmt.Printf("")
+						}
+
+						// apply
+						ok, err := applyObject(pre, obj)
+						require.True(ttt, ok, "apply object not found")
+
+						// verify
+						if post != nil {
+							targetPostRoot, err := post.HashTreeRoot()
+							require.NoError(ttt, err)
+
+							actualPostRoot, err := pre.HashTreeRoot()
+							require.NoError(ttt, err)
+
+							require.EqualValues(ttt, targetPostRoot, actualPostRoot)
+						} else {
+							require.NotNil(ttt, err)
+						}
+					} else {
+						ttt.Skip("no object function")
+					}
+				})
 			}
+		})
 
-			// unmarshal object
-			obj := objFunc()
-			byts, err := ioutil.ReadFile(path.Join(subDir, fmt.Sprintf("%s.ssz",subDirs)))
-			require.NoError(ttt, err)
-			require.NoError(ttt, obj.(ssz.Unmarshaler).UnmarshalSSZ(byts))
 
-			// apply
-			applyObject(t, pre, obj)
-		} else {
-			ttt.Skip("no object function")
-		}
-	})
+	}
+
+
 }
 
 
-func applyObject(t *testing.T, preState *core.State, obj interface{}) {
+func applyObject(preState *core.State, obj interface{}) (bool, error) {
 	if v, ok := obj.(*core.Attestation); ok {
-		require.NoError(t, state_transition.ProcessBlockAttestations(preState, []*core.Attestation{v}))
+		return true, state_transition.ProcessBlockAttestations(preState, []*core.Attestation{v})
 	}
+	if v, ok := obj.(*core.AttesterSlashing); ok {
+		return true, state_transition.ProcessAttesterSlashings(preState, []*core.AttesterSlashing{v})
+	}
+	return false, nil
 }

@@ -18,13 +18,15 @@ var nameToObject = map[string]func() interface{} {
 	"attestation": func() interface{} { return new(core.Attestation) },
 	"AttestationData": func() interface{} { return new(core.AttestationData) },
 	"AttesterSlashing": func() interface{} { return new(core.AttesterSlashing) },
+	"attester_slashing": func() interface{} { return new(core.AttesterSlashing) },
 	"BeaconBlock": func() interface{} { return new(core.Block) },
 	"BeaconBlockBody": func() interface{} { return new(core.BlockBody) },
 	"BeaconBlockHeader": func() interface{} { return new(core.BlockHeader) },
-
+	"block_header": func() interface{} { return new(core.BlockHeader) },
 	"BeaconState": func() interface{} { return new(core.State) },
 	"Checkpoint": func() interface{} { return new(core.Checkpoint) },
 	"Deposit": func() interface{} { return new(core.Deposit) },
+	"deposit": func() interface{} { return new(core.Deposit) },
 	"DepositData": func() interface{} { return new(core.Deposit_DepositData) },
 	"DepositMessage": func() interface{} { return new(core.DepositMessage) },
 	"Eth1Block": nil,
@@ -35,6 +37,7 @@ var nameToObject = map[string]func() interface{} {
 	"IndexedAttestation": func() interface{} { return new(core.IndexedAttestation) },
 	"PendingAttestation": func() interface{} { return new(core.PendingAttestation) },
 	"ProposerSlashing": func() interface{} { return new(core.ProposerSlashing) },
+	"proposer_slashing": func() interface{} { return new(core.ProposerSlashing) },
 	"SignedAggregateAndProof": nil,
 	"SignedBeaconBlock": func() interface{} { return new(core.SignedBlock) },
 	"SignedBeaconBlockHeader": func() interface{} { return new(core.SignedBlockHeader) },
@@ -42,6 +45,7 @@ var nameToObject = map[string]func() interface{} {
 	"SigningData": nil,
 	"Validator": func() interface{} { return new(core.Validator) },
 	"VoluntaryExit": func() interface{} { return new(core.VoluntaryExit) },
+	"voluntary_exit": func() interface{} { return new(core.VoluntaryExit) },
 }
 
 func TestSpecSSZStaticMainnet(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/wealdtech/go-bytesutil"
 	"sort"
@@ -23,8 +24,11 @@ import (
 		)
  */
 func IsSlashableAttestationData (att1 *core.AttestationData, att2 *core.AttestationData) bool {
-	return (!core.AttestationDataEqual(att1, att2) && att1.Target.Epoch == att2.Target.Epoch) ||
-		(att1.Source.Epoch < att2.Source.Epoch && att2.Target.Epoch < att2.Target.Epoch)
+	return (!core.AttestationDataEqual(att1, att2) && att1.Target.Epoch == att2.Target.Epoch) || // double
+		(																						// surround
+			(att1.Source.Epoch < att2.Source.Epoch && att2.Target.Epoch < att1.Target.Epoch) ||
+				(att2.Source.Epoch < att1.Source.Epoch && att1.Target.Epoch < att2.Target.Epoch))
+
 }
 
 /**
@@ -44,30 +48,63 @@ def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: Indexe
 // TODO - is_valid_indexed_attestation
  */
 func IsValidIndexedAttestation(state *core.State, attestation *core.IndexedAttestation) (bool, error) {
+	validateIndices := func (indices []uint64) error {
+		if len(indices) == 0 {
+			return fmt.Errorf("indices length 0")
+		}
+		if uint64(len(indices)) > params.ChainConfig.MaxValidatorsPerCommittee {
+			return fmt.Errorf("committee indices count larger than MaxValidatorsPerCommittee")
+		}
+		for i := 1; i < len(indices); i++ {
+			if indices[i-1] >= indices[i] {
+				return fmt.Errorf("attesting indices is not uniquely sorted")
+			}
+		}
+		return nil
+	}
+
 	// Verify indices are sorted and unique
 	indices := attestation.AttestingIndices
-	if len(indices) == 0 {
-		return false, fmt.Errorf("indices length 0")
+	if err := validateIndices(indices); err != nil {
+		return false, err
 	}
-	// TODO - or not indices == sorted(set(indices))
+
 	// Verify aggregate signature
-	pubkeys := [][]byte{}
+	pks := []bls.PublicKey{}
 	for _, index := range indices {
-		bp := GetValidator(state, index)
-		if bp == nil {
+		validator := GetValidator(state, index)
+		if validator == nil {
 			return false, fmt.Errorf("BP not found")
 		}
-		pubkeys = append(pubkeys, bp.PublicKey)
+		pk := bls.PublicKey{}
+		err := pk.Deserialize(validator.PublicKey)
+		if err != nil {
+			return false, err
+		}
+		pks = append(pks, pk)
 	}
+
 	domain, err := GetDomain(state, params.ChainConfig.DomainBeaconAttester, attestation.Data.Target.Epoch)
 	if err != nil {
 		return false, err
 	}
-	root, err := ComputeSigningRoot(attestation.Data, domain)
+	root, err :=  ComputeSigningRoot(attestation.Data, domain)
 	if err != nil {
 		return false, err
 	}
-	return VerifyAggregateSignature(root[:], pubkeys, domain)
+
+	sig := &bls.Sign{}
+	err = sig.Deserialize(attestation.Signature)
+	if err != nil {
+		return false, err
+	}
+
+	// verify sig
+	res := sig.FastAggregateVerify(pks, root[:])
+	if !res {
+		return false, fmt.Errorf("indexed attestation signature not vrified")
+	}
+	return true, nil
 }
 
 /**
