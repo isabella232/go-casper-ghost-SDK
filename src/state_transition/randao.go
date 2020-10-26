@@ -21,8 +21,8 @@ import (
 //    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
 //    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func processRANDAO (state *core.State, block *core.Block) error {
-	bp := shared.GetValidator(state, block.Proposer)
-	if bp == nil {
+	validator := shared.GetValidator(state, block.Proposer)
+	if validator == nil {
 		return fmt.Errorf("could not find BP")
 	}
 
@@ -30,7 +30,7 @@ func processRANDAO (state *core.State, block *core.Block) error {
 	if err != nil {
 		return err
 	}
-	res, err := shared.VerifyRandaoRevealSignature(data, domain, bp.PubKey, block.Body.RandaoReveal)
+	res, err := shared.VerifyRandaoRevealSignature(data, domain, validator.PublicKey, block.Body.RandaoReveal)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func processRANDAONoVerify(state *core.State, block *core.Block) error {
 		latestMix[i] ^= x
 	}
 
-	state.RandaoMix[shared.GetCurrentEpoch(state) % params.ChainConfig.EpochsPerHistoricalVector] = latestMix
+	state.RandaoMixes[shared.GetCurrentEpoch(state) % params.ChainConfig.EpochsPerHistoricalVector] = latestMix
 	return nil
 }
 

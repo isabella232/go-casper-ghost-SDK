@@ -187,7 +187,7 @@ def compute_fork_data_root(current_version: Version, genesis_validators_root: Ro
 func ComputeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
 	ret := &core.ForkData{
 		CurrentVersion:       version,
-		GenesisValidatorRoot: root,
+		GenesisValidatorsRoot: root,
 	}
 	return ret.HashTreeRoot()
 }

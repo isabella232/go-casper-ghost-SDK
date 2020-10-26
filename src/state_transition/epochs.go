@@ -345,7 +345,7 @@ func ProcessFinalUpdates(state *core.State) error {
 	state.Slashings[nextEpoch % params.ChainConfig.EpochsPerSlashingVector] = 0
 
 	// Set randao mix
-	state.RandaoMix[nextEpoch % params.ChainConfig.EpochsPerHistoricalVector] = shared.GetRandaoMix(state, currentEpoch)
+	state.RandaoMixes[nextEpoch % params.ChainConfig.EpochsPerHistoricalVector] = shared.GetRandaoMix(state, currentEpoch)
 
 	// Set historical root accumulator
 	if nextEpoch % (params.ChainConfig.SlotsPerHistoricalRoot / params.ChainConfig.SlotsInEpoch) == 0 {

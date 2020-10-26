@@ -178,15 +178,15 @@ func validateAttestationSignature(state *core.State, attestation *core.Attestati
 	pks := make([]bls.PublicKey,0)
 
 	for i, id := range expectedCommittee {
-		bp := shared.GetValidator(state, id)
-		if bp == nil {
+		validator := shared.GetValidator(state, id)
+		if validator == nil {
 			return fmt.Errorf("BP %d is inactivee ", id)
 		}
 
 		// deserialize pk and aggregate
 		if attestation.AggregationBits.BitAt(uint64(i)) {
 			pk := bls.PublicKey{}
-			err := pk.Deserialize(bp.PubKey)
+			err := pk.Deserialize(validator.PublicKey)
 			if err != nil {
 				return err
 			}

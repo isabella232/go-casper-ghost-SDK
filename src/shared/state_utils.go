@@ -30,10 +30,10 @@ func CopyState(state *core.State) *core.State {
 		copy(ret.StateRoots[i], r)
 	}
 
-	ret.RandaoMix = make([][]byte, len(state.RandaoMix))
-	for i, r := range state.RandaoMix {
-		ret.RandaoMix[i] = make([]byte, len(state.RandaoMix[i]))
-		copy(ret.RandaoMix[i], r)
+	ret.RandaoMixes = make([][]byte, len(state.RandaoMixes))
+	for i, r := range state.RandaoMixes {
+		ret.RandaoMixes[i] = make([]byte, len(state.RandaoMixes[i]))
+		copy(ret.RandaoMixes[i], r)
 	}
 
 	ret.HistoricalRoots = make([][]byte, len(state.HistoricalRoots))

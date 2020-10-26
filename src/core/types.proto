@@ -60,14 +60,6 @@ message Validator {
 
 }
 
-message StateCommitment {
-    bytes StateRoot = 1; // pools chain state root as of the last block at said epoch
-    bytes Epoch = 2;
-    repeated bytes Committee = 3; // see https://github.com/ethereum/annotated-spec/blob/master/phase1/beacon-chain.md#compactcommittee
-    bytes AuxCommitteesRoot = 4;
-    repeated bytes NextCommittee = 5;
-}
-
 message Fork {
     bytes previous_version = 1 [(gogoproto.moretags) = "ssz-size:\"4\""];
     bytes current_version = 2 [(gogoproto.moretags) = "ssz-size:\"4\""];
@@ -80,6 +72,6 @@ message ForkData {
 }
 
 message HistoricalBatch {
-    repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"8192\""];
-    repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"?,32\" ssz-max:\"8192\""];
+    repeated bytes block_roots = 1 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
+    repeated bytes state_roots = 2 [(gogoproto.moretags) = "ssz-size:\"8192,32\""];
 }

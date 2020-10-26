@@ -318,7 +318,7 @@ func SlashValidator(state *core.State, slashedIndex uint64) error {
 func ValidatorIndexByPubkey(state *core.State, pk []byte) (uint64, error) {
 	// TODO - ValidatorIndexByPubkey optimize with some kind of map
 	for i, bp := range state.Validators {
-		if bytes.Equal(pk, bp.PubKey) {
+		if bytes.Equal(pk, bp.PublicKey) {
 			return uint64(i), nil
 		}
 	}

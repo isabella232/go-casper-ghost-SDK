@@ -5,658 +5,6 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 )
 
-// MarshalSSZ ssz marshals the BlockHeader object
-func (b *BlockHeader) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(b)
-}
-
-// MarshalSSZTo ssz marshals the BlockHeader object to a target array
-func (b *BlockHeader) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'Slot'
-	dst = ssz.MarshalUint64(dst, b.Slot)
-
-	// Field (1) 'ProposerIndex'
-	dst = ssz.MarshalUint64(dst, b.ProposerIndex)
-
-	// Field (2) 'ParentRoot'
-	if len(b.ParentRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.ParentRoot...)
-
-	// Field (3) 'StateRoot'
-	if len(b.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.StateRoot...)
-
-	// Field (4) 'BodyRoot'
-	if len(b.BodyRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, b.BodyRoot...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the BlockHeader object
-func (b *BlockHeader) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 112 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'Slot'
-	b.Slot = ssz.UnmarshallUint64(buf[0:8])
-
-	// Field (1) 'ProposerIndex'
-	b.ProposerIndex = ssz.UnmarshallUint64(buf[8:16])
-
-	// Field (2) 'ParentRoot'
-	if cap(b.ParentRoot) == 0 {
-		b.ParentRoot = make([]byte, 0, len(buf[16:48]))
-	}
-	b.ParentRoot = append(b.ParentRoot, buf[16:48]...)
-
-	// Field (3) 'StateRoot'
-	if cap(b.StateRoot) == 0 {
-		b.StateRoot = make([]byte, 0, len(buf[48:80]))
-	}
-	b.StateRoot = append(b.StateRoot, buf[48:80]...)
-
-	// Field (4) 'BodyRoot'
-	if cap(b.BodyRoot) == 0 {
-		b.BodyRoot = make([]byte, 0, len(buf[80:112]))
-	}
-	b.BodyRoot = append(b.BodyRoot, buf[80:112]...)
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the BlockHeader object
-func (b *BlockHeader) SizeSSZ() (size int) {
-	size = 112
-	return
-}
-
-// HashTreeRoot ssz hashes the BlockHeader object
-func (b *BlockHeader) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(b)
-}
-
-// HashTreeRootWith ssz hashes the BlockHeader object with a hasher
-func (b *BlockHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'Slot'
-	hh.PutUint64(b.Slot)
-
-	// Field (1) 'ProposerIndex'
-	hh.PutUint64(b.ProposerIndex)
-
-	// Field (2) 'ParentRoot'
-	if len(b.ParentRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.ParentRoot)
-
-	// Field (3) 'StateRoot'
-	if len(b.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.StateRoot)
-
-	// Field (4) 'BodyRoot'
-	if len(b.BodyRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(b.BodyRoot)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the ETH1Data object
-func (e *ETH1Data) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(e)
-}
-
-// MarshalSSZTo ssz marshals the ETH1Data object to a target array
-func (e *ETH1Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'DepositRoot'
-	if len(e.DepositRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, e.DepositRoot...)
-
-	// Field (1) 'DepositCount'
-	dst = ssz.MarshalUint64(dst, e.DepositCount)
-
-	// Field (2) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, e.BlockHash...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the ETH1Data object
-func (e *ETH1Data) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 72 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'DepositRoot'
-	if cap(e.DepositRoot) == 0 {
-		e.DepositRoot = make([]byte, 0, len(buf[0:32]))
-	}
-	e.DepositRoot = append(e.DepositRoot, buf[0:32]...)
-
-	// Field (1) 'DepositCount'
-	e.DepositCount = ssz.UnmarshallUint64(buf[32:40])
-
-	// Field (2) 'BlockHash'
-	if cap(e.BlockHash) == 0 {
-		e.BlockHash = make([]byte, 0, len(buf[40:72]))
-	}
-	e.BlockHash = append(e.BlockHash, buf[40:72]...)
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the ETH1Data object
-func (e *ETH1Data) SizeSSZ() (size int) {
-	size = 72
-	return
-}
-
-// HashTreeRoot ssz hashes the ETH1Data object
-func (e *ETH1Data) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(e)
-}
-
-// HashTreeRootWith ssz hashes the ETH1Data object with a hasher
-func (e *ETH1Data) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'DepositRoot'
-	if len(e.DepositRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.DepositRoot)
-
-	// Field (1) 'DepositCount'
-	hh.PutUint64(e.DepositCount)
-
-	// Field (2) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(e.BlockHash)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the PendingAttestation object
-func (p *PendingAttestation) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(p)
-}
-
-// MarshalSSZTo ssz marshals the PendingAttestation object to a target array
-func (p *PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-	offset := int(148)
-
-	// Offset (0) 'AggregationBits'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(p.AggregationBits)
-
-	// Field (1) 'Data'
-	if p.Data == nil {
-		p.Data = new(AttestationData)
-	}
-	if dst, err = p.Data.MarshalSSZTo(dst); err != nil {
-		return
-	}
-
-	// Field (2) 'InclusionDelay'
-	dst = ssz.MarshalUint64(dst, p.InclusionDelay)
-
-	// Field (3) 'ProposerIndex'
-	dst = ssz.MarshalUint64(dst, p.ProposerIndex)
-
-	// Field (0) 'AggregationBits'
-	if len(p.AggregationBits) > 2048 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, p.AggregationBits...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the PendingAttestation object
-func (p *PendingAttestation) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 148 {
-		return ssz.ErrSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'AggregationBits'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return ssz.ErrOffset
-	}
-
-	// Field (1) 'Data'
-	if p.Data == nil {
-		p.Data = new(AttestationData)
-	}
-	if err = p.Data.UnmarshalSSZ(buf[4:132]); err != nil {
-		return err
-	}
-
-	// Field (2) 'InclusionDelay'
-	p.InclusionDelay = ssz.UnmarshallUint64(buf[132:140])
-
-	// Field (3) 'ProposerIndex'
-	p.ProposerIndex = ssz.UnmarshallUint64(buf[140:148])
-
-	// Field (0) 'AggregationBits'
-	{
-		buf = tail[o0:]
-		if err = ssz.ValidateBitlist(buf, 2048); err != nil {
-			return err
-		}
-		if cap(p.AggregationBits) == 0 {
-			p.AggregationBits = make([]byte, 0, len(buf))
-		}
-		p.AggregationBits = append(p.AggregationBits, buf...)
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the PendingAttestation object
-func (p *PendingAttestation) SizeSSZ() (size int) {
-	size = 148
-
-	// Field (0) 'AggregationBits'
-	size += len(p.AggregationBits)
-
-	return
-}
-
-// HashTreeRoot ssz hashes the PendingAttestation object
-func (p *PendingAttestation) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(p)
-}
-
-// HashTreeRootWith ssz hashes the PendingAttestation object with a hasher
-func (p *PendingAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'AggregationBits'
-	if len(p.AggregationBits) == 0 {
-		err = ssz.ErrEmptyBitlist
-		return
-	}
-	hh.PutBitlist(p.AggregationBits, 2048)
-
-	// Field (1) 'Data'
-	if err = p.Data.HashTreeRootWith(hh); err != nil {
-		return
-	}
-
-	// Field (2) 'InclusionDelay'
-	hh.PutUint64(p.InclusionDelay)
-
-	// Field (3) 'ProposerIndex'
-	hh.PutUint64(p.ProposerIndex)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the Attestation object
-func (a *Attestation) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(a)
-}
-
-// MarshalSSZTo ssz marshals the Attestation object to a target array
-func (a *Attestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-	offset := int(228)
-
-	// Offset (0) 'AggregationBits'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(a.AggregationBits)
-
-	// Field (1) 'Data'
-	if a.Data == nil {
-		a.Data = new(AttestationData)
-	}
-	if dst, err = a.Data.MarshalSSZTo(dst); err != nil {
-		return
-	}
-
-	// Field (2) 'Signature'
-	if len(a.Signature) != 96 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, a.Signature...)
-
-	// Field (0) 'AggregationBits'
-	if len(a.AggregationBits) > 2048 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, a.AggregationBits...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the Attestation object
-func (a *Attestation) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size < 228 {
-		return ssz.ErrSize
-	}
-
-	tail := buf
-	var o0 uint64
-
-	// Offset (0) 'AggregationBits'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return ssz.ErrOffset
-	}
-
-	// Field (1) 'Data'
-	if a.Data == nil {
-		a.Data = new(AttestationData)
-	}
-	if err = a.Data.UnmarshalSSZ(buf[4:132]); err != nil {
-		return err
-	}
-
-	// Field (2) 'Signature'
-	if cap(a.Signature) == 0 {
-		a.Signature = make([]byte, 0, len(buf[132:228]))
-	}
-	a.Signature = append(a.Signature, buf[132:228]...)
-
-	// Field (0) 'AggregationBits'
-	{
-		buf = tail[o0:]
-		if err = ssz.ValidateBitlist(buf, 2048); err != nil {
-			return err
-		}
-		if cap(a.AggregationBits) == 0 {
-			a.AggregationBits = make([]byte, 0, len(buf))
-		}
-		a.AggregationBits = append(a.AggregationBits, buf...)
-	}
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the Attestation object
-func (a *Attestation) SizeSSZ() (size int) {
-	size = 228
-
-	// Field (0) 'AggregationBits'
-	size += len(a.AggregationBits)
-
-	return
-}
-
-// HashTreeRoot ssz hashes the Attestation object
-func (a *Attestation) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(a)
-}
-
-// HashTreeRootWith ssz hashes the Attestation object with a hasher
-func (a *Attestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'AggregationBits'
-	if len(a.AggregationBits) == 0 {
-		err = ssz.ErrEmptyBitlist
-		return
-	}
-	hh.PutBitlist(a.AggregationBits, 2048)
-
-	// Field (1) 'Data'
-	if err = a.Data.HashTreeRootWith(hh); err != nil {
-		return
-	}
-
-	// Field (2) 'Signature'
-	if len(a.Signature) != 96 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(a.Signature)
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the AttestationData object
-func (a *AttestationData) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(a)
-}
-
-// MarshalSSZTo ssz marshals the AttestationData object to a target array
-func (a *AttestationData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'Slot'
-	dst = ssz.MarshalUint64(dst, a.Slot)
-
-	// Field (1) 'CommitteeIndex'
-	dst = ssz.MarshalUint64(dst, a.CommitteeIndex)
-
-	// Field (2) 'BeaconBlockRoot'
-	if len(a.BeaconBlockRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, a.BeaconBlockRoot...)
-
-	// Field (3) 'Source'
-	if a.Source == nil {
-		a.Source = new(Checkpoint)
-	}
-	if dst, err = a.Source.MarshalSSZTo(dst); err != nil {
-		return
-	}
-
-	// Field (4) 'Target'
-	if a.Target == nil {
-		a.Target = new(Checkpoint)
-	}
-	if dst, err = a.Target.MarshalSSZTo(dst); err != nil {
-		return
-	}
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the AttestationData object
-func (a *AttestationData) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 128 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'Slot'
-	a.Slot = ssz.UnmarshallUint64(buf[0:8])
-
-	// Field (1) 'CommitteeIndex'
-	a.CommitteeIndex = ssz.UnmarshallUint64(buf[8:16])
-
-	// Field (2) 'BeaconBlockRoot'
-	if cap(a.BeaconBlockRoot) == 0 {
-		a.BeaconBlockRoot = make([]byte, 0, len(buf[16:48]))
-	}
-	a.BeaconBlockRoot = append(a.BeaconBlockRoot, buf[16:48]...)
-
-	// Field (3) 'Source'
-	if a.Source == nil {
-		a.Source = new(Checkpoint)
-	}
-	if err = a.Source.UnmarshalSSZ(buf[48:88]); err != nil {
-		return err
-	}
-
-	// Field (4) 'Target'
-	if a.Target == nil {
-		a.Target = new(Checkpoint)
-	}
-	if err = a.Target.UnmarshalSSZ(buf[88:128]); err != nil {
-		return err
-	}
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the AttestationData object
-func (a *AttestationData) SizeSSZ() (size int) {
-	size = 128
-	return
-}
-
-// HashTreeRoot ssz hashes the AttestationData object
-func (a *AttestationData) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(a)
-}
-
-// HashTreeRootWith ssz hashes the AttestationData object with a hasher
-func (a *AttestationData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'Slot'
-	hh.PutUint64(a.Slot)
-
-	// Field (1) 'CommitteeIndex'
-	hh.PutUint64(a.CommitteeIndex)
-
-	// Field (2) 'BeaconBlockRoot'
-	if len(a.BeaconBlockRoot) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(a.BeaconBlockRoot)
-
-	// Field (3) 'Source'
-	if err = a.Source.HashTreeRootWith(hh); err != nil {
-		return
-	}
-
-	// Field (4) 'Target'
-	if err = a.Target.HashTreeRootWith(hh); err != nil {
-		return
-	}
-
-	hh.Merkleize(indx)
-	return
-}
-
-// MarshalSSZ ssz marshals the Checkpoint object
-func (c *Checkpoint) MarshalSSZ() ([]byte, error) {
-	return ssz.MarshalSSZ(c)
-}
-
-// MarshalSSZTo ssz marshals the Checkpoint object to a target array
-func (c *Checkpoint) MarshalSSZTo(buf []byte) (dst []byte, err error) {
-	dst = buf
-
-	// Field (0) 'Epoch'
-	dst = ssz.MarshalUint64(dst, c.Epoch)
-
-	// Field (1) 'Root'
-	if len(c.Root) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	dst = append(dst, c.Root...)
-
-	return
-}
-
-// UnmarshalSSZ ssz unmarshals the Checkpoint object
-func (c *Checkpoint) UnmarshalSSZ(buf []byte) error {
-	var err error
-	size := uint64(len(buf))
-	if size != 40 {
-		return ssz.ErrSize
-	}
-
-	// Field (0) 'Epoch'
-	c.Epoch = ssz.UnmarshallUint64(buf[0:8])
-
-	// Field (1) 'Root'
-	if cap(c.Root) == 0 {
-		c.Root = make([]byte, 0, len(buf[8:40]))
-	}
-	c.Root = append(c.Root, buf[8:40]...)
-
-	return err
-}
-
-// SizeSSZ returns the ssz encoded size in bytes for the Checkpoint object
-func (c *Checkpoint) SizeSSZ() (size int) {
-	size = 40
-	return
-}
-
-// HashTreeRoot ssz hashes the Checkpoint object
-func (c *Checkpoint) HashTreeRoot() ([32]byte, error) {
-	return ssz.HashWithDefaultHasher(c)
-}
-
-// HashTreeRootWith ssz hashes the Checkpoint object with a hasher
-func (c *Checkpoint) HashTreeRootWith(hh *ssz.Hasher) (err error) {
-	indx := hh.Index()
-
-	// Field (0) 'Epoch'
-	hh.PutUint64(c.Epoch)
-
-	// Field (1) 'Root'
-	if len(c.Root) != 32 {
-		err = ssz.ErrBytesLength
-		return
-	}
-	hh.PutBytes(c.Root)
-
-	hh.Merkleize(indx)
-	return
-}
-
 // MarshalSSZ ssz marshals the State object
 func (s *State) MarshalSSZ() ([]byte, error) {
 	return ssz.MarshalSSZ(s)
@@ -1728,22 +1076,13 @@ func (h *HistoricalBatch) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the HistoricalBatch object to a target array
 func (h *HistoricalBatch) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := int(8)
-
-	// Offset (0) 'BlockRoots'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(h.BlockRoots) * 32
-
-	// Offset (1) 'StateRoots'
-	dst = ssz.WriteOffset(dst, offset)
-	offset += len(h.StateRoots) * 32
 
 	// Field (0) 'BlockRoots'
-	if len(h.BlockRoots) > 8192 {
-		err = ssz.ErrListTooBig
+	if len(h.BlockRoots) != 8192 {
+		err = ssz.ErrVectorLength
 		return
 	}
-	for ii := 0; ii < len(h.BlockRoots); ii++ {
+	for ii := 0; ii < 8192; ii++ {
 		if len(h.BlockRoots[ii]) != 32 {
 			err = ssz.ErrBytesLength
 			return
@@ -1752,11 +1091,11 @@ func (h *HistoricalBatch) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (1) 'StateRoots'
-	if len(h.StateRoots) > 8192 {
-		err = ssz.ErrListTooBig
+	if len(h.StateRoots) != 8192 {
+		err = ssz.ErrVectorLength
 		return
 	}
-	for ii := 0; ii < len(h.StateRoots); ii++ {
+	for ii := 0; ii < 8192; ii++ {
 		if len(h.StateRoots[ii]) != 32 {
 			err = ssz.ErrBytesLength
 			return
@@ -1771,67 +1110,34 @@ func (h *HistoricalBatch) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 func (h *HistoricalBatch) UnmarshalSSZ(buf []byte) error {
 	var err error
 	size := uint64(len(buf))
-	if size < 8 {
+	if size != 524288 {
 		return ssz.ErrSize
 	}
 
-	tail := buf
-	var o0, o1 uint64
-
-	// Offset (0) 'BlockRoots'
-	if o0 = ssz.ReadOffset(buf[0:4]); o0 > size {
-		return ssz.ErrOffset
-	}
-
-	// Offset (1) 'StateRoots'
-	if o1 = ssz.ReadOffset(buf[4:8]); o1 > size || o0 > o1 {
-		return ssz.ErrOffset
-	}
-
 	// Field (0) 'BlockRoots'
-	{
-		buf = tail[o0:o1]
-		num, err := ssz.DivideInt2(len(buf), 32, 8192)
-		if err != nil {
-			return err
+	h.BlockRoots = make([][]byte, 8192)
+	for ii := 0; ii < 8192; ii++ {
+		if cap(h.BlockRoots[ii]) == 0 {
+			h.BlockRoots[ii] = make([]byte, 0, len(buf[0:262144][ii*32:(ii+1)*32]))
 		}
-		h.BlockRoots = make([][]byte, num)
-		for ii := 0; ii < num; ii++ {
-			if cap(h.BlockRoots[ii]) == 0 {
-				h.BlockRoots[ii] = make([]byte, 0, len(buf[ii*32:(ii+1)*32]))
-			}
-			h.BlockRoots[ii] = append(h.BlockRoots[ii], buf[ii*32:(ii+1)*32]...)
-		}
+		h.BlockRoots[ii] = append(h.BlockRoots[ii], buf[0:262144][ii*32:(ii+1)*32]...)
 	}
 
 	// Field (1) 'StateRoots'
-	{
-		buf = tail[o1:]
-		num, err := ssz.DivideInt2(len(buf), 32, 8192)
-		if err != nil {
-			return err
+	h.StateRoots = make([][]byte, 8192)
+	for ii := 0; ii < 8192; ii++ {
+		if cap(h.StateRoots[ii]) == 0 {
+			h.StateRoots[ii] = make([]byte, 0, len(buf[262144:524288][ii*32:(ii+1)*32]))
 		}
-		h.StateRoots = make([][]byte, num)
-		for ii := 0; ii < num; ii++ {
-			if cap(h.StateRoots[ii]) == 0 {
-				h.StateRoots[ii] = make([]byte, 0, len(buf[ii*32:(ii+1)*32]))
-			}
-			h.StateRoots[ii] = append(h.StateRoots[ii], buf[ii*32:(ii+1)*32]...)
-		}
+		h.StateRoots[ii] = append(h.StateRoots[ii], buf[262144:524288][ii*32:(ii+1)*32]...)
 	}
+
 	return err
 }
 
 // SizeSSZ returns the ssz encoded size in bytes for the HistoricalBatch object
 func (h *HistoricalBatch) SizeSSZ() (size int) {
-	size = 8
-
-	// Field (0) 'BlockRoots'
-	size += len(h.BlockRoots) * 32
-
-	// Field (1) 'StateRoots'
-	size += len(h.StateRoots) * 32
-
+	size = 524288
 	return
 }
 
@@ -1846,8 +1152,8 @@ func (h *HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (0) 'BlockRoots'
 	{
-		if len(h.BlockRoots) > 8192 {
-			err = ssz.ErrListTooBig
+		if len(h.BlockRoots) != 8192 {
+			err = ssz.ErrVectorLength
 			return
 		}
 		subIndx := hh.Index()
@@ -1858,14 +1164,13 @@ func (h *HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			}
 			hh.Append(i)
 		}
-		numItems := uint64(len(h.BlockRoots))
-		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(8192, numItems, 32))
+		hh.Merkleize(subIndx)
 	}
 
 	// Field (1) 'StateRoots'
 	{
-		if len(h.StateRoots) > 8192 {
-			err = ssz.ErrListTooBig
+		if len(h.StateRoots) != 8192 {
+			err = ssz.ErrVectorLength
 			return
 		}
 		subIndx := hh.Index()
@@ -1876,8 +1181,7 @@ func (h *HistoricalBatch) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			}
 			hh.Append(i)
 		}
-		numItems := uint64(len(h.StateRoots))
-		hh.MerkleizeWithMixin(subIndx, numItems, ssz.CalculateLimit(8192, numItems, 32))
+		hh.Merkleize(subIndx)
 	}
 
 	hh.Merkleize(indx)

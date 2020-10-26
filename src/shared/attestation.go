@@ -57,7 +57,7 @@ func IsValidIndexedAttestation(state *core.State, attestation *core.IndexedAttes
 		if bp == nil {
 			return false, fmt.Errorf("BP not found")
 		}
-		pubkeys = append(pubkeys, bp.PubKey)
+		pubkeys = append(pubkeys, bp.PublicKey)
 	}
 	domain, err := GetDomain(state, params.ChainConfig.DomainBeaconAttester, attestation.Data.Target.Epoch)
 	if err != nil {

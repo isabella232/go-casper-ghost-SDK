@@ -46,7 +46,7 @@ message Deposit {
     // 96 byte signature from the validators public key.
     bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
   }
-  repeated bytes proof = 1;
+  repeated bytes proof = 1 [(gogoproto.moretags) = "ssz-size:\"33,32\""];
   DepositData data = 2;
 }
 

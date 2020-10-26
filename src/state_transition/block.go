@@ -134,7 +134,7 @@ func verifyBlockSig(state *core.State, signedBlock *core.SignedBlock) error {
 	if err != nil {
 		return err
 	}
-	if err := shared.VerifyBlockSigningRoot(block, proposer.GetPubKey(), signedBlock.Signature, domain); err != nil { // TODO - domain not hard coded
+	if err := shared.VerifyBlockSigningRoot(block, proposer.GetPublicKey(), signedBlock.Signature, domain); err != nil { // TODO - domain not hard coded
 		return fmt.Errorf("process block: %s", err.Error())
 	}
 	return nil

@@ -77,7 +77,7 @@ func processProposerSlashing(state *core.State, slashing *core.ProposerSlashing)
 		if err != nil {
 			return err
 		}
-		res, err := shared.VerifySignature(root[:], proposer.PubKey, sig.Signature)
+		res, err := shared.VerifySignature(root[:], proposer.PublicKey, sig.Signature)
 		if err != nil {
 			return err
 		}

@@ -101,7 +101,7 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 			},
 			BlockRoots:                blockRoots,
 			StateRoots:                stateRoots,
-			RandaoMix:                 randaoMixes,
+			RandaoMixes:                 randaoMixes,
 			HistoricalRoots:           [][]byte{},
 			GenesisValidatorsRoot:     genesisValidatorRoot[:],
 			PreviousEpochAttestations: []*core.PendingAttestation{},
