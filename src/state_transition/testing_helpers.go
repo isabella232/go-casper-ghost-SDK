@@ -302,12 +302,16 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		// process
 		st := NewStateTransition()
 		// compute state root
-		root, err := st.ComputeStateRoot(c.State, &core.SignedBlock{
+		computedState, err := st.ExecuteStateTransition(c.State, &core.SignedBlock{
 			Block:                block,
 			Signature:            []byte{},
-		})
+		}, false)
 		if err != nil {
 			log.Fatal(err)
+		}
+		root, err := computedState.HashTreeRoot()
+		if err != nil {
+			log.SetPrefix(err.Error())
 		}
 		block.StateRoot = root[:]
 
@@ -331,7 +335,7 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		newState, err := st.ExecuteStateTransition(c.State, &core.SignedBlock{
 			Block:                block,
 			Signature:            sig.Serialize(),
-		})
+		}, true)
 		if err != nil {
 			log.Fatal(err)
 		} else {

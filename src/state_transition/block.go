@@ -10,68 +10,70 @@ import (
 	"github.com/prysmaticlabs/go-ssz"
 )
 
-func (st *StateTransition) ProcessBlock(state *core.State, signedBlock *core.SignedBlock) error {
-	if err := processBlockHeader(state, signedBlock); err != nil {
-		return err
+func (st *StateTransition) ProcessBlock(state *core.State, block *core.Block) error {
+	if err := ProcessBlockHeader(state, block); err != nil {
+		return fmt.Errorf("ProcessBlock: %s", err.Error())
 	}
-	if err := processRANDAO(state, signedBlock.Block); err != nil {
-		return err
+	if err := processRANDAO(state, block); err != nil {
+		return fmt.Errorf("ProcessBlock: %s", err.Error())
 	}
-	if err := processEth1Data(state, signedBlock.Block.Body); err != nil {
-		return err
+	if err := processEth1Data(state, block.Body); err != nil {
+		return fmt.Errorf("ProcessBlock: %s", err.Error())
 	}
-	if err := processOperations(state, signedBlock.Block.Body); err != nil {
-		return err
+	if err := processOperations(state, block.Body); err != nil {
+		return fmt.Errorf("ProcessBlock: %s", err.Error())
 	}
 	return nil
 }
 
 func (st *StateTransition) processBlockForStateRoot(state *core.State, signedBlock *core.SignedBlock) error {
-	if err := processBlockHeaderNoVerify(state, signedBlock); err != nil {
-		return err
+	if err := ProcessBlockHeader(state, signedBlock.Block); err != nil {
+		return fmt.Errorf("processBlockForStateRoot: %s", err.Error())
 	}
 	if err := processRANDAONoVerify(state, signedBlock.Block); err != nil {
-		return err
+		return fmt.Errorf("processBlockForStateRoot: %s", err.Error())
 	}
 	if err := processEth1Data(state, signedBlock.Block.Body); err != nil {
-		return err
+		return fmt.Errorf("processBlockForStateRoot: %s", err.Error())
 	}
 	if err := processOperationsNoVerify(state, signedBlock.Block.Body); err != nil {
-		return err
+		return fmt.Errorf("processBlockForStateRoot: %s", err.Error())
 	}
 	return nil
 }
 
-// ProcessBlockHeader validates a block by its header.
-//
-// Spec pseudocode definition:
-//
-//  def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-//    # Verify that the slots match
-//    assert block.slot == state.slot
-//     # Verify that proposer index is the correct index
-//    assert block.proposer_index == get_beacon_proposer_index(state)
-//    # Verify that the parent matches
-//    assert block.parent_root == hash_tree_root(state.latest_block_header)
-//    # Save current block as the new latest block
-//    state.latest_block_header = BeaconBlockHeader(
-//        slot=block.slot,
-//        parent_root=block.parent_root,
-//        # state_root: zeroed, overwritten in the next `process_slot` call
-//        body_root=hash_tree_root(block.block),
-//		  # signature is always zeroed
-//    )
-//    # Verify proposer is not slashed
-//    proposer = state.validators[get_beacon_proposer_index(state)]
-//    assert not proposer.slashed
-//    # Verify proposer signature
-//    assert bls_verify(proposer.pubkey, signing_root(block), block.signature, get_domain(state, DOMAIN_BEACON_PROPOSER))
-func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedBlock) error {
-	block := signedBlock.Block
+/**
+def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+    # Verify that the slots match
+    assert block.slot == state.slot
+    # Verify that the block is newer than latest block header
+    assert block.slot > state.latest_block_header.slot
+    # Verify that proposer index is the correct index
+    assert block.proposer_index == get_beacon_proposer_index(state)
+    # Verify that the parent matches
+    assert block.parent_root == hash_tree_root(state.latest_block_header)
+    # Cache current block as the new latest block
+    state.latest_block_header = BeaconBlockHeader(
+        slot=block.slot,
+        proposer_index=block.proposer_index,
+        parent_root=block.parent_root,
+        state_root=Bytes32(),  # Overwritten in the next process_slot call
+        body_root=hash_tree_root(block.body),
+    )
 
+    # Verify proposer is not slashed
+    proposer = state.validators[block.proposer_index]
+    assert not proposer.slashed
+ */
+func ProcessBlockHeader(state *core.State, block *core.Block) error {
 	// slot
 	if state.Slot != block.Slot {
 		return fmt.Errorf("block slot doesn't match state slot")
+	}
+
+	// Verify that the block is newer than latest block header
+	if block.Slot <= state.LatestBlockHeader.Slot {
+		return fmt.Errorf("bad block header")
 	}
 
 	// proposer
@@ -106,37 +108,15 @@ func processBlockHeaderNoVerify(state *core.State, signedBlock *core.SignedBlock
 		StateRoot: 			  params.ChainConfig.ZeroHash, // state_root: zeroed, overwritten in the next `process_slot` call
 	}
 
-	// TODO - verify proposer is not slashed
+	// verify proposer is not slashed
+	val := shared.GetValidator(state, expectedProposer)
+	if val == nil {
+		return fmt.Errorf("could not find proposer")
+	}
+	if val.Slashed {
+		return fmt.Errorf("block proposer is slashed")
+	}
 
-	return nil
-}
-
-func processBlockHeader(state *core.State, signedBlock *core.SignedBlock) error {
-	if err := processBlockHeaderNoVerify(state, signedBlock); err != nil {
-		return err
-	}
-	if err := verifyBlockSig(state, signedBlock); err != nil {
-		return err
-	}
-	return nil
-}
-
-func verifyBlockSig(state *core.State, signedBlock *core.SignedBlock) error {
-	block := signedBlock.Block
-	epoch := shared.GetCurrentEpoch(state)
-
-	// verify sig
-	proposer := shared.GetValidator(state, block.GetProposer())
-	if proposer == nil {
-		return fmt.Errorf("proposer not found")
-	}
-	domain, err := shared.GetDomain(state, params.ChainConfig.DomainBeaconProposer, epoch)
-	if err != nil {
-		return err
-	}
-	if err := shared.VerifyBlockSigningRoot(block, proposer.GetPublicKey(), signedBlock.Signature, domain); err != nil { // TODO - domain not hard coded
-		return fmt.Errorf("process block: %s", err.Error())
-	}
 	return nil
 }
 

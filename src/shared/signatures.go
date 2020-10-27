@@ -42,6 +42,25 @@ func VerifyBlockSigningRoot(block *core.Block, pubKey []byte, sigByts []byte, do
 	return nil
 }
 
+func VerifyBlockSig(state *core.State, signedBlock *core.SignedBlock) error {
+	block := signedBlock.Block
+	epoch := GetCurrentEpoch(state)
+
+	// verify sig
+	proposer := GetValidator(state, block.GetProposer())
+	if proposer == nil {
+		return fmt.Errorf("proposer not found")
+	}
+	domain, err := GetDomain(state, params.ChainConfig.DomainBeaconProposer, epoch)
+	if err != nil {
+		return err
+	}
+	if err := VerifyBlockSigningRoot(block, proposer.GetPublicKey(), signedBlock.Signature, domain); err != nil {
+		return err
+	}
+	return nil
+}
+
 func BlockSigningRoot(block *core.Block, domain []byte) ([32]byte, error) {
 	root, err := ssz.HashTreeRoot(block)
 	if err != nil {

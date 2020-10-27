@@ -75,11 +75,11 @@ message SignedBlock {
 }
 
 message BlockHeader {
-  uint64 Slot = 1;
-  uint64 ProposerIndex = 2;
-  bytes ParentRoot = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  bytes StateRoot = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  bytes BodyRoot = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 slot = 1;
+  uint64 proposer_index = 2;
+  bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes state_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes body_root = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
 message SignedBlockHeader {

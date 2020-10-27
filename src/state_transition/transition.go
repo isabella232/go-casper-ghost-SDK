@@ -25,25 +25,7 @@ type IStateTransition interface {
 	//        assert block.state_root == hash_tree_root(state)
 	//    # Return post-state
 	//    return state
-	ExecuteStateTransition(state *core.State, signedBlock *core.SignedBlock) (newState *core.State, err error)
-
-	// ComputeStateRoot defines the procedure for a state transition function.
-	// This does not validate any BLS signatures in a block, it is used for calculating the
-	// state root of the state for the block proposer to use.
-	// This does not modify state.
-	//
-	// WARNING: This method does not validate any BLS signatures. This is used for proposer to compute
-	// state root before proposing a new block, and this does not modify state.
-	//
-	// Spec pseudocode definition:
-	//  def state_transition(state: BeaconState, block: BeaconBlock, validate_state_root: bool=False) -> BeaconState:
-	//    # Process slots (including those with no blocks) since block
-	//    process_slots(state, block.slot)
-	//    # Process block
-	//    process_block(state, block)
-	//    # Return post-state
-	//    return state
-	ComputeStateRoot(state *core.State, signedBlock *core.SignedBlock) ([32]byte, error)
+	ExecuteStateTransition(state *core.State, signedBlock *core.SignedBlock, validateResult bool) (newState *core.State, err error)
 
 	// ProcessBlock creates a new, modified beacon state by applying block operation
 	// transformations as defined in the Ethereum Serenity specification, including processing proposer slashings,
@@ -75,39 +57,33 @@ type IStateTransition interface {
 type StateTransition struct {}
 func NewStateTransition() *StateTransition { return &StateTransition{} }
 
-func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock *core.SignedBlock) (newState *core.State, err error) {
+func (st *StateTransition)ExecuteStateTransition(state *core.State, signedBlock *core.SignedBlock, validateResult bool) (newState *core.State, err error) {
 	newState = shared.CopyState(state)
 
 	if err := st.ProcessSlots(newState, signedBlock.Block.Slot); err != nil {
 		return nil, fmt.Errorf("ExecuteStateTransition: %s", err.Error())
 	}
 
-	if err := st.ProcessBlock(newState, signedBlock); err != nil {
+	if validateResult {
+		err := shared.VerifyBlockSig(newState, signedBlock)
+		if err != nil {
+			return nil, fmt.Errorf("ExecuteStateTransition: %s", err.Error())
+		}
+	}
+
+	if err := st.ProcessBlock(newState, signedBlock.Block); err != nil {
 		return nil, fmt.Errorf("ExecuteStateTransition: %s", err.Error())
 	}
 
-	postStateRoot, err := newState.HashTreeRoot()
-	if err != nil {
-		return nil, fmt.Errorf("ExecuteStateTransition: %s", err.Error())
-	}
-	if !bytes.Equal(signedBlock.Block.StateRoot, postStateRoot[:]) {
-		return nil, fmt.Errorf("ExecuteStateTransition: new block state root is wrong, expected %s", hex.EncodeToString(postStateRoot[:]))
+	if validateResult {
+		postStateRoot, err := newState.HashTreeRoot()
+		if err != nil {
+			return nil, fmt.Errorf("ExecuteStateTransition: %s", err.Error())
+		}
+		if !bytes.Equal(signedBlock.Block.StateRoot, postStateRoot[:]) {
+			return nil, fmt.Errorf("ExecuteStateTransition: new block state root is wrong, expected %s", hex.EncodeToString(postStateRoot[:]))
+		}
 	}
 
 	return newState, nil
-}
-
-
-func (st *StateTransition) ComputeStateRoot(state *core.State, signedBlock *core.SignedBlock) ([32]byte, error) {
-	stateCopy := shared.CopyState(state)
-
-	if err := st.ProcessSlots(stateCopy, signedBlock.Block.Slot); err != nil {
-		return [32]byte{}, fmt.Errorf("ComputeStateRoot: %s", err.Error())
-	}
-
-	if err := st.processBlockForStateRoot(stateCopy, signedBlock); err != nil {
-		return [32]byte{}, fmt.Errorf("ComputeStateRoot: %s", err.Error())
-	}
-
-	return stateCopy.HashTreeRoot()
 }
