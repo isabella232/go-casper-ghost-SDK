@@ -3,6 +3,7 @@ package spec_tests
 import (
 	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
+	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/state_transition"
 	ssz "github.com/ferranbt/fastssz"
@@ -45,7 +46,11 @@ func TestSpecOperationsMainnet(t *testing.T) {
 						return
 					}
 					subDir := path.Join(objDirsPath, dir.Name())
-					if objFunc, ok := nameToObject[testObj.Name()]; ok && objFunc != nil {
+					if objFunc, ok := nameToObject[sszObj]; ok && objFunc != nil {
+						if dir.Name() == "invalid_multiple_blocks_single_slot" {
+							fmt.Printf("")
+						}
+
 						// unmarshal pre state
 						preByts, err := ioutil.ReadFile(path.Join(subDir, "pre.ssz"))
 						require.NoError(ttt, err)
@@ -65,10 +70,6 @@ func TestSpecOperationsMainnet(t *testing.T) {
 						byts, err := ioutil.ReadFile(path.Join(subDir, fmt.Sprintf("%s.ssz",sszObj)))
 						require.NoError(ttt, err)
 						require.NoError(ttt, obj.(ssz.Unmarshaler).UnmarshalSSZ(byts))
-
-						if dir.Name() == "invalid_multiple_blocks_single_slot" {
-							fmt.Printf("")
-						}
 
 						// apply
 						ok, err := applyObject(pre, obj)
@@ -106,6 +107,13 @@ func applyObject(preState *core.State, obj interface{}) (bool, error) {
 	}
 	if v, ok := obj.(*core.AttesterSlashing); ok {
 		return true, state_transition.ProcessAttesterSlashings(preState, []*core.AttesterSlashing{v})
+	}
+	if v, ok := obj.(*core.Block); ok {
+		proposer := shared.GetValidator(preState, v.Proposer)
+		if proposer == nil {
+			return false, fmt.Errorf("block proposer not found")
+		}
+		return true, state_transition.ProcessBlockHeader(preState, v)
 	}
 	return false, nil
 }

@@ -20,6 +20,7 @@ var nameToObject = map[string]func() interface{} {
 	"AttesterSlashing": func() interface{} { return new(core.AttesterSlashing) },
 	"attester_slashing": func() interface{} { return new(core.AttesterSlashing) },
 	"BeaconBlock": func() interface{} { return new(core.Block) },
+	"block": func() interface{} { return new(core.Block) },
 	"BeaconBlockBody": func() interface{} { return new(core.BlockBody) },
 	"BeaconBlockHeader": func() interface{} { return new(core.BlockHeader) },
 	"block_header": func() interface{} { return new(core.BlockHeader) },
