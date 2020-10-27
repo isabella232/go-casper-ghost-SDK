@@ -47,7 +47,7 @@ func TestSpecOperationsMainnet(t *testing.T) {
 					}
 					subDir := path.Join(objDirsPath, dir.Name())
 					if objFunc, ok := nameToObject[sszObj]; ok && objFunc != nil {
-						if dir.Name() == "invalid_multiple_blocks_single_slot" {
+						if dir.Name() == "default_exit_epoch_subsequent_exit" {
 							fmt.Printf("")
 						}
 
@@ -114,6 +114,15 @@ func applyObject(preState *core.State, obj interface{}) (bool, error) {
 			return false, fmt.Errorf("block proposer not found")
 		}
 		return true, state_transition.ProcessBlockHeader(preState, v)
+	}
+	if v, ok := obj.(*core.Deposit); ok {
+		return true, state_transition.ProcessDeposits(preState, []*core.Deposit{v})
+	}
+	if v, ok := obj.(*core.ProposerSlashing); ok {
+		return true, state_transition.ProcessProposerSlashings(preState, []*core.ProposerSlashing{v})
+	}
+	if v, ok := obj.(*core.SignedVoluntaryExit); ok {
+		return true, state_transition.ProcessVoluntaryExit(preState, v)
 	}
 	return false, nil
 }

@@ -85,7 +85,7 @@ func processProposerSlashing(state *core.State, slashing *core.ProposerSlashing)
 			return fmt.Errorf("proposer slashing: sig not verified for proposer %d", header1.ProposerIndex)
 		}
 	}
-	return nil
+	return shared.SlashValidator(state, header1.ProposerIndex)
 }
 
 func ProcessAttesterSlashings(state *core.State, slashings []*core.AttesterSlashing) error {

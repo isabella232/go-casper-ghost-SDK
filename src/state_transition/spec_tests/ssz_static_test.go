@@ -46,7 +46,7 @@ var nameToObject = map[string]func() interface{} {
 	"SigningData": nil,
 	"Validator": func() interface{} { return new(core.Validator) },
 	"VoluntaryExit": func() interface{} { return new(core.VoluntaryExit) },
-	"voluntary_exit": func() interface{} { return new(core.VoluntaryExit) },
+	"voluntary_exit": func() interface{} { return new(core.SignedVoluntaryExit) },
 }
 
 func TestSpecSSZStaticMainnet(t *testing.T) {

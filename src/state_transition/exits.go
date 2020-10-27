@@ -9,7 +9,7 @@ import (
 
 func ProcessExits(state *core.State, exits []*core.SignedVoluntaryExit) error {
 	for _, exit := range exits {
-		if err := processExit(state, exit); err != nil {
+		if err := ProcessVoluntaryExit(state, exit); err != nil {
 			return err
 		}
 	}
@@ -35,7 +35,7 @@ def process_voluntary_exit(state: BeaconState, signed_voluntary_exit: SignedVolu
     # Initiate exit
     initiate_validator_exit(state, voluntary_exit.validator_index)
  */
-func processExit(state *core.State, exit *core.SignedVoluntaryExit) error {
+func ProcessVoluntaryExit(state *core.State, exit *core.SignedVoluntaryExit) error {
 	voluntaryExit := exit.Exit
 	validator := shared.GetValidator(state, voluntaryExit.ValidatorIndex)
 	if validator == nil {
