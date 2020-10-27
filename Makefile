@@ -1,11 +1,13 @@
 test:
 	go test -cover -race ./...
 
-spec_test_minimal:
-	./scripts/download-spec-tests.sh v0.12.3 minimal
+#spec_test_minimal:
+#	./scripts/download-spec-tests.sh v0.12.3 minimal
 
 spec_test_mainnet:
 	./scripts/download-spec-tests.sh v0.12.3 mainnet
+	go test ./src/state_transition/spec_tests/...
+	rm -r ./src/state_transition/spec_tests/.temp
 
 generate_proto:
 	find . -type f -name '*.pb.go' -delete
