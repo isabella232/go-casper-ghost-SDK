@@ -54,7 +54,7 @@ func GetBaseReward(state *core.State, index uint64) (uint64, error) {
 	totalBalance := GetTotalActiveBalance(state)
 	if bp := GetValidator(state, index); bp != nil {
 		effectiveBalance := bp.EffectiveBalance
-		return effectiveBalance * params.ChainConfig.BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance), nil
+		return effectiveBalance * params.ChainConfig.BaseRewardFactor / mathutil.IntegerSquareRoot(totalBalance) / params.ChainConfig.BaseRewardsPerEpoch, nil
 	} else {
 		return 0, fmt.Errorf("could not find BP %d", index)
 	}
@@ -96,7 +96,7 @@ def get_eligible_validator_indices(state: BeaconState) -> Sequence[ValidatorInde
         if is_active_validator(v, previous_epoch) or (v.slashed and previous_epoch + 1 < v.withdrawable_epoch)
     ]
  */
-func GetEligibleBpIndices(state *core.State) []uint64 {
+func GetEligibleValidatorIndices(state *core.State) []uint64 {
 	ret := []uint64{}
 	prevEpoch := GetPreviousEpoch(state)
 	for i, bp := range state.Validators {
@@ -148,7 +148,8 @@ func GetAttestationComponentDeltas(state *core.State, attestations []*core.Pendi
 
 	attestingBalance := GetTotalBalance(state, unslashedAttestingIndices)
 
-	for _, index := range GetEligibleBpIndices(state) {
+	eligible := GetEligibleValidatorIndices(state)
+	for _, index := range eligible {
 		if unslashedAttestingIndicesMap[index] {
 			increment := params.ChainConfig.EffectiveBalanceIncrement
 			base, err := GetBaseReward(state, index)
@@ -334,17 +335,17 @@ func GetInactivityPenaltyDeltas(state *core.State) ([]uint64, []uint64, error) {
 		for _, i := range matchingTargetAttestingIndices {
 			matchingTargetAttestingIndicesMap[i] = true
 		}
-		for _, index := range GetEligibleBpIndices(state) {
+		for _, index := range GetEligibleValidatorIndices(state) {
 			// If validator is performing optimally this cancels all rewards for a neutral balance
 			base, err := GetBaseReward(state, index)
 			if err != nil {
 				return nil, nil, err
 			}
-			proposer, err := GetProposerReward(state, index)
+			proposerReward, err := GetProposerReward(state, index)
 			if err != nil {
 				return nil, nil, err
 			}
-			penalties[index] += params.ChainConfig.BaseRewardsPerEpoch * base - proposer
+			penalties[index] += params.ChainConfig.BaseRewardsPerEpoch * base - proposerReward
 			if !matchingTargetAttestingIndicesMap[index] {
 				effectiveBalance := GetValidator(state, index).EffectiveBalance
 				penalties[index] += effectiveBalance * GetFinalityDelay(state) / params.ChainConfig.InactivityPenaltyQuotient

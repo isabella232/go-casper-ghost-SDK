@@ -17,7 +17,7 @@ import (
 //	process_slashings(state)
 //	process_final_updates(state)
 func processEpoch(state *core.State) error {
-	if err := processJustificationAndFinalization(state); err != nil {
+	if err := ProcessJustificationAndFinalization(state); err != nil {
 		return err
 	}
 	if err := ProcessRewardsAndPenalties(state); err != nil {
@@ -79,7 +79,7 @@ def process_justification_and_finalization(state: BeaconState) -> None:
     if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
         state.finalized_checkpoint = old_current_justified_checkpoint
  */
-func processJustificationAndFinalization(state *core.State) error {
+func ProcessJustificationAndFinalization(state *core.State) error {
 	if shared.GetCurrentEpoch(state) <= params.ChainConfig.GenesisEpoch + 1 {
 		return nil
 	}

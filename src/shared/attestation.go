@@ -226,10 +226,10 @@ func GetAttestingIndices(state *core.State, data *core.AttestationData, bits bit
 	if err != nil {
 		return nil, err
 	}
-	ret := []uint64{}
-	for i := range bits.BitIndices() {
-		if bits.BitAt(uint64(i)) {
-			ret = append(ret, committee[i])
+	ret := make([]uint64,0,bits.Count())
+	for _, idx := range bits.BitIndices() {
+		if idx < len(committee) {
+			ret = append(ret, committee[idx])
 		}
 	}
 	return ret, nil
@@ -244,7 +244,7 @@ def get_unslashed_attesting_indices(state: BeaconState,
     return set(filter(lambda index: not state.validators[index].slashed, output))
  */
 func GetUnslashedAttestingIndices(state *core.State, attestations []*core.PendingAttestation) ([]uint64, error) {
-	output := []uint64{}
+	output := make([]uint64,0)
 	seen := make(map[uint64]bool)
 
 	for _, a := range attestations {
@@ -265,11 +265,12 @@ func GetUnslashedAttestingIndices(state *core.State, attestations []*core.Pendin
 		return output[i] < output[j]
 	})
 
-	// Remove the slashed validator indices.
+	// Remove slashed validator indices.
+	ret := make([]uint64, 0)
 	for i := range output {
 		bp := GetValidator(state, output[i])
-		if bp != nil && bp.Slashed {
-			output = append(output[:i], output[i+1:]...)
+		if bp != nil && !bp.Slashed {
+			output = append(ret, output[i])
 		}
 	}
 	return output, nil

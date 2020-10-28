@@ -36,7 +36,7 @@ func TestSpecOperationsMainnet(t *testing.T) {
 		t.Run(testObj.Name(), func(tt *testing.T) {
 			objDirsPath := path.Join(root, testObj.Name(),"pyspec_tests/")
 			dirs, err := ioutil.ReadDir(objDirsPath)
-			require.NoError(t, err)
+			require.NoError(tt, err)
 
 			for _, dir := range dirs { // iterate scenarios, e.g, operations/attestation/after_epoch_slots
 				t.Run(testObj.Name() + "/" + dir.Name(), func(ttt *testing.T) {
@@ -47,7 +47,7 @@ func TestSpecOperationsMainnet(t *testing.T) {
 					}
 					subDir := path.Join(objDirsPath, dir.Name())
 					if objFunc, ok := nameToObject[sszObj]; ok && objFunc != nil {
-						if dir.Name() == "default_exit_epoch_subsequent_exit" {
+						if dir.Name() == "attestations_some_slashed" {
 							fmt.Printf("")
 						}
 
