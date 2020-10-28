@@ -19,9 +19,9 @@ def get_total_balance(state: BeaconState, indices: Set[ValidatorIndex]) -> Gwei:
 func GetTotalBalance(state *core.State, indices []uint64) uint64 {
 	sum := uint64(0)
 	for _, index := range indices {
-		bp := GetValidator(state, index)
-		if bp != nil {
-			sum += bp.EffectiveBalance
+		val := GetValidator(state, index)
+		if val != nil {
+			sum += val.EffectiveBalance
 		}
 	}
 

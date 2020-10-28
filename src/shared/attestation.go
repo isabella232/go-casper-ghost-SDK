@@ -7,7 +7,6 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/wealdtech/go-bytesutil"
 	"sort"
 )
 
@@ -119,20 +118,26 @@ def compute_committee(indices: Sequence[ValidatorIndex],
     end = (len(indices) * uint64(index + 1)) // count
     return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
  */
-func ComputeCommittee(indices []uint64, seed []byte, index uint64, count uint64) ([]uint64, error) {
+func ComputeCommittee(indices []uint64, seed [32]byte, index uint64, count uint64) ([]uint64, error) {
 	start := uint64(len(indices)) * index / count
 	end := uint64(len(indices)) * uint64(index + 1) / count
 
-	ret := []uint64{}
-	for i := start ; i < end ; i++ {
-		idx, err := computeShuffledIndex(i, uint64(len(indices)), bytesutil.ToBytes32(seed), true, params.ChainConfig.ShuffleRoundCount)
-		if err != nil {
-			return []uint64{}, err
-		}
-
-		ret = append(ret, idx)
+	unshuffled, err := UnshuffleList(indices, seed)
+	if err != nil {
+		return nil, err
 	}
-	return ret, nil
+	return unshuffled[start:end], nil
+
+	//ret := []uint64{}
+	//for i := start ; i < end ; i++ {
+	//	idx, err := computeShuffledIndex(i, uint64(len(indices)), seed, true, params.ChainConfig.ShuffleRoundCount)
+	//	if err != nil {
+	//		return []uint64{}, err
+	//	}
+	//
+	//	ret = append(ret, idx)
+	//}
+	//return ret, nil
 }
 
 /**
@@ -177,9 +182,15 @@ func GetBeaconCommittee(state *core.State, slot uint64, index uint64) ([]uint64,
 	epoch := ComputeEpochAtSlot(slot)
 	committeesPerSlot := GetCommitteeCountPerSlot(state, slot)
 	seed := GetSeed(state, epoch, params.ChainConfig.DomainBeaconAttester)
+
+	active := GetActiveValidators(state, epoch)
+	if false {
+		return active, nil
+	}
+
 	return ComputeCommittee(
 			GetActiveValidators(state, epoch),
-			seed[:],
+			seed,
 			(slot % params.ChainConfig.SlotsInEpoch) * committeesPerSlot + index,
 			committeesPerSlot * params.ChainConfig.SlotsInEpoch,
 		)
@@ -268,12 +279,12 @@ func GetUnslashedAttestingIndices(state *core.State, attestations []*core.Pendin
 	// Remove slashed validator indices.
 	ret := make([]uint64, 0)
 	for i := range output {
-		bp := GetValidator(state, output[i])
-		if bp != nil && !bp.Slashed {
-			output = append(ret, output[i])
+		val := GetValidator(state, output[i])
+		if val != nil && !val.Slashed {
+			ret = append(ret, output[i])
 		}
 	}
-	return output, nil
+	return ret, nil
 }
 
 /**
