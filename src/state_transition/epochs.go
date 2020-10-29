@@ -226,20 +226,22 @@ def process_registry_updates(state: BeaconState) -> None:
         validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
 */
 func ProcessRegistryUpdates(state *core.State) error {
-	for index, bp := range state.Validators {
-		if shared.IsEligibleForActivationQueue(bp) {
-			bp.ActivationEligibilityEpoch = shared.GetCurrentEpoch(state) + 1
+	for index, val := range state.Validators {
+		if shared.IsEligibleForActivationQueue(val) {
+			val.ActivationEligibilityEpoch = shared.GetCurrentEpoch(state) + 1
 		}
 
-		if shared.IsActiveValidator(bp, shared.GetCurrentEpoch(state)) && bp.EffectiveBalance <= params.ChainConfig.EjectionBalance {
+		isActive :=  shared.IsActiveValidator(val, shared.GetCurrentEpoch(state))
+		belowEjectionBalance := val.EffectiveBalance <= params.ChainConfig.EjectionBalance
+		if isActive && belowEjectionBalance {
 			shared.InitiateValidatorExit(state, uint64(index))
 		}
 	}
 
 	// Queue validators eligible for activation and not yet dequeued for activation
 	activationQueue := []uint64{}
-	for index, bp := range state.Validators {
-		if shared.IsEligibleForActivation(state, bp) {
+	for index, val := range state.Validators {
+		if shared.IsEligibleForActivation(state, val) {
 			activationQueue = append(activationQueue, uint64(index))
 		}
 	}
@@ -252,9 +254,11 @@ func ProcessRegistryUpdates(state *core.State) error {
 	})
 
 	// Dequeued validators for activation up to churn limit
-	for index := range activationQueue[:mathutil.Min(uint64(len(activationQueue)), shared.GetValidatorChurnLimit(state))] {
-		bp := state.Validators[index]
-		bp.ActivationEpoch = shared.ComputeActivationExitEpoch(shared.GetCurrentEpoch(state))
+	activationExitEpoch := shared.ComputeActivationExitEpoch(shared.GetCurrentEpoch(state))
+	valChurnRate := shared.GetValidatorChurnLimit(state)
+	for _, index := range activationQueue[:mathutil.Min(uint64(len(activationQueue)), valChurnRate)] {
+		val := state.Validators[index]
+		val.ActivationEpoch = activationExitEpoch
 	}
 	return nil
 }
