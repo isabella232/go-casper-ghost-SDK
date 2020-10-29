@@ -12,7 +12,7 @@ import (
 )
 
 func SignBlock(block *core.Block, sk []byte, domain []byte) (*bls.Sign, error) {
-	root, err := BlockSigningRoot(block, domain)
+	root, err := ComputeSigningRoot(block, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func SignBlock(block *core.Block, sk []byte, domain []byte) (*bls.Sign, error) {
 }
 
 func VerifyBlockSigningRoot(block *core.Block, pubKey []byte, sigByts []byte, domain []byte) error {
-	root, err := BlockSigningRoot(block, domain)
+	root, err := ComputeSigningRoot(block, domain)
 	if err != nil {
 		return err
 	}
@@ -61,34 +61,10 @@ func VerifyBlockSig(state *core.State, signedBlock *core.SignedBlock) error {
 	return nil
 }
 
-func BlockSigningRoot(block *core.Block, domain []byte) ([32]byte, error) {
-	root, err := ssz.HashTreeRoot(block)
-	if err != nil {
-		return [32]byte{}, err
-	}
-	container := struct {
-		ObjectRoot []byte
-		Domain []byte
-	}{
-		root[:],
-		domain,
-	}
-	return ssz.HashTreeRoot(container)
-}
 
-func RandaoSigningRoot(data []byte, domain []byte) ([32]byte, error) {
-	container := struct {
-		ObjectRoot []byte
-		Domain []byte
-	}{
-		data,
-		domain,
-	}
-	return ssz.HashTreeRoot(container)
-}
-
-func SignRandao(data []byte, domain []byte, sk []byte) (*bls.Sign, error) {
-	root, err := RandaoSigningRoot(data, domain)
+func SignRandao(data [32]byte, domain []byte, sk []byte) (*bls.Sign, error) {
+	return nil, fmt.Errorf("redo sign randao")
+	root, err := ComputeSigningRoot(data, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +78,8 @@ func SignRandao(data []byte, domain []byte, sk []byte) (*bls.Sign, error) {
 	return sig, nil
 }
 
-func VerifyRandaoRevealSignature(data []byte, domain []byte, pubKey []byte, sigByts []byte) (bool, error)  {
-	root, err := RandaoSigningRoot(data, domain)
+func VerifyRandaoRevealSignature(epochByts [32]byte, domain []byte, pubKey []byte, sigByts []byte) (bool, error)  {
+	root, err := ComputeSigningRoot(epochByts, domain)
 	if err != nil {
 		return false, err
 	}
@@ -242,6 +218,8 @@ func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
 	if object == nil {
 		return [32]byte{}, fmt.Errorf("cannot compute signing root of nil")
 	}
+
+
 	return signingData(func() ([32]byte, error) {
 		if v, ok := object.(ssz2.HashRoot); ok {
 			return v.HashTreeRoot()

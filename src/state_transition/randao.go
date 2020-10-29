@@ -6,6 +6,7 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
 	"github.com/ulule/deepcopier"
 )
@@ -26,11 +27,11 @@ func processRANDAO (state *core.State, block *core.Block) error {
 		return fmt.Errorf("could not find BP")
 	}
 
-	data, domain, err := RANDAOSigningData(state)
+	epochByts, domain, err := RANDAOSigningData(state)
 	if err != nil {
 		return err
 	}
-	res, err := shared.VerifyRandaoRevealSignature(data, domain, validator.PublicKey, block.Body.RandaoReveal)
+	res, err := shared.VerifyRandaoRevealSignature(epochByts, domain, validator.PublicKey, block.Body.RandaoReveal)
 	if err != nil {
 		return err
 	}
@@ -67,15 +68,15 @@ func processRANDAONoVerify(state *core.State, block *core.Block) error {
 	return nil
 }
 
-func RANDAOSigningData(state *core.State) (data []byte, domain []byte, err error)  {
+func RANDAOSigningData(state *core.State) ([32]byte, []byte, error)  {
 	epoch := shared.GetCurrentEpoch(state)
-	data = make([]byte, 8) // 64 bit
-	binary.LittleEndian.PutUint64(data, epoch)
+	epochByts := make([]byte, 32) // 64 bit
+	binary.LittleEndian.PutUint64(epochByts, epoch)
 
-	domain, err = shared.GetDomain(state, params.ChainConfig.DomainRandao, epoch)
+	domain, err := shared.GetDomain(state, params.ChainConfig.DomainRandao, epoch)
 	if err != nil {
-		return nil,nil, err
+		return [32]byte{},nil, err
 	}
 
-	return data, domain, nil
+	return bytesutil.ToBytes32(epochByts), domain, nil
 }
