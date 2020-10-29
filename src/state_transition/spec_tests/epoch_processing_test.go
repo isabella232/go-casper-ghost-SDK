@@ -12,33 +12,31 @@ import (
 )
 
 func TestSpecFinalUpdatesMainnet(t *testing.T) {
-	baseTest(t, "final_updates")
+	baseEpochProcessingTest(t, "final_updates")
 }
 
 func TestSpecJustificationAndFinalizationMainnet(t *testing.T) {
-	baseTest(t, "justification_and_finalization")
+	baseEpochProcessingTest(t, "justification_and_finalization")
 }
 
 func TestSpecRewardsAndPenaltiesMainnet(t *testing.T) {
-	baseTest(t, "rewards_and_penalties")
+	baseEpochProcessingTest(t, "rewards_and_penalties")
 }
 
 func TestSpecSlashingsMainnet(t *testing.T) {
-	baseTest(t, "slashings")
+	baseEpochProcessingTest(t, "slashings")
 }
 
 func TestSpecRegistryUpdatesMainnet(t *testing.T) {
-	baseTest(t, "registry_updates")
+	baseEpochProcessingTest(t, "registry_updates")
 }
 
-func baseTest(t *testing.T, phase string) {
+func baseEpochProcessingTest(t *testing.T, phase string) {
 	params.UseMainnetConfig()
 	base, err := os.Getwd()
 	require.NoError(t, err)
 
 	root := path.Join(base, rootSpecTestsFolder,"mainnet/phase0/epoch_processing", phase)
-	//phaseToTest, err := ioutil.ReadDir(root)
-	//require.NoError(t, err)
 
 	t.Run(phase, func(tt *testing.T) {
 		phaseDirsPath := path.Join(root,"pyspec_tests/")

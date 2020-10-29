@@ -317,7 +317,12 @@ func GetMatchingTargetAttestations(state *core.State, epoch uint64) ([]*core.Pen
 		return nil, err
 	}
 
-	ret := []*core.PendingAttestation{}
+	ret := make([]*core.PendingAttestation,0)
+
+	if len(source) == 0 {
+		return ret, nil
+	}
+
 	targetRoot, err := GetBlockRoot(state, epoch)
 	if err != nil {
 		return nil, err
