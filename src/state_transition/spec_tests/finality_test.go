@@ -63,9 +63,9 @@ func baseFinalityTest(t *testing.T, scenario string) {
 
 				// execute blocks
 				st := state_transition.NewStateTransition()
-				for _, blk := range blocks {
+				for i, blk := range blocks {
 					newState, err := st.ExecuteStateTransition(pre, blk, true)
-					require.NoError(t, err)
+					require.NoError(t, err, fmt.Sprintf("block %d", i))
 					pre = newState
 				}
 			})

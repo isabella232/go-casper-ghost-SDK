@@ -8,7 +8,6 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/ulule/deepcopier"
 )
 
 // Spec pseudocode definition:
@@ -42,18 +41,14 @@ func processRANDAO (state *core.State, block *core.Block) error {
 	return processRANDAONoVerify(state, block)
 }
 
-// ProcessRandaoNoVerify generates a new randao mix to update
-// in the beacon state's latest randao mixes slice.
-//
-// Spec pseudocode definition:
-//     # Mix it in
-//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
-//         xor(get_randao_mix(state, get_current_epoch(state)),
-//             hash(body.randao_reveal))
-//     )
+/**
+# Mix in RANDAO reveal
+    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
+    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
+ */
 func processRANDAONoVerify(state *core.State, block *core.Block) error {
 	latestMix := make([]byte, 32)
-	deepcopier.Copy(shared.GetRandaoMix(state, shared.GetCurrentEpoch(state))).To(latestMix)
+	copy(latestMix, shared.GetRandaoMix(state, shared.GetCurrentEpoch(state)))
 	hash := hashutil.Hash(block.Body.RandaoReveal)
 
 	if len(hash) != len(latestMix) {
