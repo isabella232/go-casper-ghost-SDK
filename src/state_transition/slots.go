@@ -1,10 +1,9 @@
 package state_transition
 
 import (
+	"bytes"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
-	"log"
-	"time"
 )
 
 func (st *StateTransition) ProcessSlots(state *core.State, slot uint64) error {
@@ -41,30 +40,24 @@ func (st *StateTransition) ProcessSlots(state *core.State, slot uint64) error {
 //    previous_block_root = hash_tree_root(state.latest_block_header)
 //    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
 func processSlot(state *core.State) error {
-	start := time.Now()
-
-	// state root
-	stateRoot, err := state.HashTreeRoot()
+	// state prevBlockRoot
+	prevStateRoot, err := state.HashTreeRoot()
 	if err != nil {
 		return err
 	}
-	state.StateRoots[state.Slot% params.ChainConfig.SlotsPerHistoricalRoot] = stateRoot[:]
+	state.StateRoots[state.Slot % params.ChainConfig.SlotsPerHistoricalRoot] = prevStateRoot[:]
 
 	// update latest header
-	state.LatestBlockHeader.StateRoot = stateRoot[:]
+	if state.LatestBlockHeader.StateRoot == nil || bytes.Equal(state.LatestBlockHeader.StateRoot, params.ChainConfig.ZeroHash) {
+		state.LatestBlockHeader.StateRoot = prevStateRoot[:]
+	}
 
-	strot := time.Now()
-	log.Printf("state root: %f\n", strot.Sub(start).Seconds())
-
-	// add block root
-	root, err := state.LatestBlockHeader.HashTreeRoot()
+	// add block prevBlockRoot
+	prevBlockRoot, err := state.LatestBlockHeader.HashTreeRoot()
 	if err != nil {
 		return err
 	}
-	state.BlockRoots[state.Slot% params.ChainConfig.SlotsPerHistoricalRoot] = root[:]
-
-	blk := time.Now()
-	log.Printf("block root: %f\n", blk.Sub(strot).Seconds())
+	state.BlockRoots[state.Slot % params.ChainConfig.SlotsPerHistoricalRoot] = prevBlockRoot[:]
 	return nil
 }
 

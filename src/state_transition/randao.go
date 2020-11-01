@@ -6,8 +6,8 @@ import (
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 	"github.com/prysmaticlabs/prysm/shared/hashutil"
-	"github.com/ulule/deepcopier"
 )
 
 // Spec pseudocode definition:
@@ -21,16 +21,16 @@ import (
 //    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
 //    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
 func processRANDAO (state *core.State, block *core.Block) error {
-	bp := shared.GetValidator(state, block.Proposer)
-	if bp == nil {
+	validator := shared.GetValidator(state, block.Proposer)
+	if validator == nil {
 		return fmt.Errorf("could not find BP")
 	}
 
-	data, domain, err := RANDAOSigningData(state)
+	epochByts, domain, err := RANDAOSigningData(state)
 	if err != nil {
 		return err
 	}
-	res, err := shared.VerifyRandaoRevealSignature(data, domain, bp.PubKey, block.Body.RandaoReveal)
+	res, err := shared.VerifyRandaoRevealSignature(epochByts, domain, validator.PublicKey, block.Body.RandaoReveal)
 	if err != nil {
 		return err
 	}
@@ -41,18 +41,14 @@ func processRANDAO (state *core.State, block *core.Block) error {
 	return processRANDAONoVerify(state, block)
 }
 
-// ProcessRandaoNoVerify generates a new randao mix to update
-// in the beacon state's latest randao mixes slice.
-//
-// Spec pseudocode definition:
-//     # Mix it in
-//     state.latest_randao_mixes[get_current_epoch(state) % LATEST_RANDAO_MIXES_LENGTH] = (
-//         xor(get_randao_mix(state, get_current_epoch(state)),
-//             hash(body.randao_reveal))
-//     )
+/**
+# Mix in RANDAO reveal
+    mix = xor(get_randao_mix(state, epoch), hash(body.randao_reveal))
+    state.randao_mixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = mix
+ */
 func processRANDAONoVerify(state *core.State, block *core.Block) error {
 	latestMix := make([]byte, 32)
-	deepcopier.Copy(shared.GetRandaoMix(state, shared.GetCurrentEpoch(state))).To(latestMix)
+	copy(latestMix, shared.GetRandaoMix(state, shared.GetCurrentEpoch(state)))
 	hash := hashutil.Hash(block.Body.RandaoReveal)
 
 	if len(hash) != len(latestMix) {
@@ -63,19 +59,19 @@ func processRANDAONoVerify(state *core.State, block *core.Block) error {
 		latestMix[i] ^= x
 	}
 
-	state.RandaoMix[shared.GetCurrentEpoch(state) % params.ChainConfig.EpochsPerHistoricalVector] = latestMix
+	state.RandaoMixes[shared.GetCurrentEpoch(state) % params.ChainConfig.EpochsPerHistoricalVector] = latestMix
 	return nil
 }
 
-func RANDAOSigningData(state *core.State) (data []byte, domain []byte, err error)  {
+func RANDAOSigningData(state *core.State) ([32]byte, []byte, error)  {
 	epoch := shared.GetCurrentEpoch(state)
-	data = make([]byte, 8) // 64 bit
-	binary.LittleEndian.PutUint64(data, epoch)
+	epochByts := make([]byte, 32) // 64 bit
+	binary.LittleEndian.PutUint64(epochByts, epoch)
 
-	domain, err = shared.GetDomain(state, params.ChainConfig.DomainRandao, epoch)
+	domain, err := shared.GetDomain(state, params.ChainConfig.DomainRandao, epoch)
 	if err != nil {
-		return nil,nil, err
+		return [32]byte{},nil, err
 	}
 
-	return data, domain, nil
+	return bytesutil.ToBytes32(epochByts), domain, nil
 }

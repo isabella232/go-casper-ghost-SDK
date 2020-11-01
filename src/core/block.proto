@@ -10,7 +10,7 @@ message BlockBody {
   // The validators RANDAO reveal 96 byte value.
   bytes randao_reveal = 1 [(gogoproto.moretags) = "ssz-size:\"96\""];
 
-  ETH1Data Eth1Data = 2;
+  ETH1Data eth1_data = 2;
 
   // 32 byte field of arbitrary data. This field may contain any data and
   // is not used for anything other than a fun message.
@@ -46,8 +46,8 @@ message Deposit {
     // 96 byte signature from the validators public key.
     bytes signature = 4 [(gogoproto.moretags) = "ssz-size:\"96\""];
   }
-  repeated bytes Proof = 1;
-  DepositData Data = 2;
+  repeated bytes proof = 1 [(gogoproto.moretags) = "ssz-size:\"33,32\""];
+  DepositData data = 2;
 }
 
 message DepositMessage {
@@ -61,16 +61,12 @@ message DepositMessage {
   uint64 amount = 3;
 }
 
-message DepositData {
-
-}
-
 message Block {
-  uint64 Slot = 1;
-  uint64 Proposer = 2;
-  bytes ParentRoot = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  bytes StateRoot = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  BlockBody Body = 5;
+  uint64 slot = 1;
+  uint64 proposer = 2;
+  bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes state_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  BlockBody body = 5;
 }
 
 message SignedBlock {
@@ -79,11 +75,11 @@ message SignedBlock {
 }
 
 message BlockHeader {
-  uint64 Slot = 1;
-  uint64 ProposerIndex = 2;
-  bytes ParentRoot = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  bytes StateRoot = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
-  bytes BodyRoot = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  uint64 slot = 1;
+  uint64 proposer_index = 2;
+  bytes parent_root = 3 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes state_root = 4 [(gogoproto.moretags) = "ssz-size:\"32\""];
+  bytes body_root = 5 [(gogoproto.moretags) = "ssz-size:\"32\""];
 }
 
 message SignedBlockHeader {

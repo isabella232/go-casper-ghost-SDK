@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	ssz2 "github.com/ferranbt/fastssz"
 	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-ssz"
 	"github.com/prysmaticlabs/prysm/shared/bytesutil"
 )
 
 func SignBlock(block *core.Block, sk []byte, domain []byte) (*bls.Sign, error) {
-	root, err := BlockSigningRoot(block, domain)
+	root, err := ComputeSigningRoot(block, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +27,7 @@ func SignBlock(block *core.Block, sk []byte, domain []byte) (*bls.Sign, error) {
 }
 
 func VerifyBlockSigningRoot(block *core.Block, pubKey []byte, sigByts []byte, domain []byte) error {
-	root, err := BlockSigningRoot(block, domain)
+	root, err := ComputeSigningRoot(block, domain)
 	if err != nil {
 		return err
 	}
@@ -41,34 +42,29 @@ func VerifyBlockSigningRoot(block *core.Block, pubKey []byte, sigByts []byte, do
 	return nil
 }
 
-func BlockSigningRoot(block *core.Block, domain []byte) ([32]byte, error) {
-	root, err := ssz.HashTreeRoot(block)
+func VerifyBlockSig(state *core.State, signedBlock *core.SignedBlock) error {
+	block := signedBlock.Block
+	epoch := GetCurrentEpoch(state)
+
+	// verify sig
+	proposer := GetValidator(state, block.GetProposer())
+	if proposer == nil {
+		return fmt.Errorf("proposer not found")
+	}
+	domain, err := GetDomain(state, params.ChainConfig.DomainBeaconProposer, epoch)
 	if err != nil {
-		return [32]byte{}, err
+		return err
 	}
-	container := struct {
-		ObjectRoot []byte
-		Domain []byte
-	}{
-		root[:],
-		domain,
+	if err := VerifyBlockSigningRoot(block, proposer.GetPublicKey(), signedBlock.Signature, domain); err != nil {
+		return err
 	}
-	return ssz.HashTreeRoot(container)
+	return nil
 }
 
-func RandaoSigningRoot(data []byte, domain []byte) ([32]byte, error) {
-	container := struct {
-		ObjectRoot []byte
-		Domain []byte
-	}{
-		data,
-		domain,
-	}
-	return ssz.HashTreeRoot(container)
-}
 
-func SignRandao(data []byte, domain []byte, sk []byte) (*bls.Sign, error) {
-	root, err := RandaoSigningRoot(data, domain)
+func SignRandao(data [32]byte, domain []byte, sk []byte) (*bls.Sign, error) {
+	return nil, fmt.Errorf("redo sign randao")
+	root, err := ComputeSigningRoot(data, domain)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +78,8 @@ func SignRandao(data []byte, domain []byte, sk []byte) (*bls.Sign, error) {
 	return sig, nil
 }
 
-func VerifyRandaoRevealSignature(data []byte, domain []byte, pubKey []byte, sigByts []byte) (bool, error)  {
-	root, err := RandaoSigningRoot(data, domain)
+func VerifyRandaoRevealSignature(epochByts [32]byte, domain []byte, pubKey []byte, sigByts []byte) (bool, error)  {
+	root, err := ComputeSigningRoot(epochByts, domain)
 	if err != nil {
 		return false, err
 	}
@@ -136,7 +132,6 @@ func GetDomain(state *core.State, domainType []byte, epoch uint64) ([]byte, erro
 	} else {
 		forkVersion = state.Fork.CurrentVersion
 	}
-
 	return ComputeDomain(domainType, forkVersion, state.GenesisValidatorsRoot)
 }
 
@@ -152,7 +147,7 @@ func GetDomain(state *core.State, domainType []byte, epoch uint64) ([]byte, erro
 //    return GetDomain(domain_type + fork_data_root[:28])
 func ComputeDomain(domainType []byte, forkVersion []byte, genesisValidatorRoot []byte) ([]byte, error) {
 	domainBytes := [4]byte{}
-	copy(domainBytes[:], domainType[0:4])
+	copy(domainBytes[:], domainType[:4])
 
 	if forkVersion == nil {
 		forkVersion = params.ChainConfig.GenesisForkVersion
@@ -162,13 +157,13 @@ func ComputeDomain(domainType []byte, forkVersion []byte, genesisValidatorRoot [
 	}
 	forkBytes := make([]byte, 4)
 	copy(forkBytes[:], forkVersion)
-	forkDataRoot, err := ComputeForkDataRoot(forkVersion, genesisValidatorRoot)
+	forkDataRoot, err := ComputeForkDataRoot(forkBytes, genesisValidatorRoot)
 	if err != nil {
 		return nil, err
 	}
 
 	var b []byte
-	b = append(b, domainType[:4]...)
+	b = append(b, domainBytes[:]...)
 	b = append(b, forkDataRoot[:28]...)
 	return b, nil
 }
@@ -187,7 +182,7 @@ def compute_fork_data_root(current_version: Version, genesis_validators_root: Ro
 func ComputeForkDataRoot(version []byte, root []byte) ([32]byte, error) {
 	ret := &core.ForkData{
 		CurrentVersion:       version,
-		GenesisValidatorRoot: root,
+		GenesisValidatorsRoot: root,
 	}
 	return ret.HashTreeRoot()
 }
@@ -219,13 +214,30 @@ def compute_signing_root(ssz_object: SSZObject, domain: Domain) -> Root:
         domain=domain,
     ))
  */
-func ComputeSigningRoot(obj interface{}, domain []byte) ([32]byte, error) {
-	container := struct {
-		ObjectRoot interface{}
-		Domain []byte
-	}{
-		obj,
-		domain,
+func ComputeSigningRoot(object interface{}, domain []byte) ([32]byte, error) {
+	if object == nil {
+		return [32]byte{}, fmt.Errorf("cannot compute signing root of nil")
 	}
-	return ssz.HashTreeRoot(container)
+
+
+	return signingData(func() ([32]byte, error) {
+		if v, ok := object.(ssz2.HashRoot); ok {
+			return v.HashTreeRoot()
+		}
+		return ssz.HashTreeRoot(object)
+	}, domain)
+}
+
+// Computes the signing data by utilising the provided root function and then
+// returning the signing data of the container object.
+func signingData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
+	objRoot, err := rootFunc()
+	if err != nil {
+		return [32]byte{}, err
+	}
+	container := &core.SigningRoot{
+		ObjectRoot: objRoot[:],
+		Domain:     domain,
+	}
+	return container.HashTreeRoot()
 }

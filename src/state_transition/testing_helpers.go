@@ -101,7 +101,7 @@ func NewStateTestContext(config *core.ChainConfig, eth1Data *core.ETH1Data, gene
 			},
 			BlockRoots:                blockRoots,
 			StateRoots:                stateRoots,
-			RandaoMix:                 randaoMixes,
+			RandaoMixes:                 randaoMixes,
 			HistoricalRoots:           [][]byte{},
 			GenesisValidatorsRoot:     genesisValidatorRoot[:],
 			PreviousEpochAttestations: []*core.PendingAttestation{},
@@ -302,12 +302,16 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		// process
 		st := NewStateTransition()
 		// compute state root
-		root, err := st.ComputeStateRoot(c.State, &core.SignedBlock{
+		computedState, err := st.ExecuteStateTransition(c.State, &core.SignedBlock{
 			Block:                block,
 			Signature:            []byte{},
-		})
+		}, false)
 		if err != nil {
 			log.Fatal(err)
+		}
+		root, err := computedState.HashTreeRoot()
+		if err != nil {
+			log.SetPrefix(err.Error())
 		}
 		block.StateRoot = root[:]
 
@@ -331,7 +335,7 @@ func (c *StateTestContext) ProgressSlotsAndEpochs(maxBlocks int, justifiedEpoch 
 		newState, err := st.ExecuteStateTransition(c.State, &core.SignedBlock{
 			Block:                block,
 			Signature:            sig.Serialize(),
-		})
+		}, true)
 		if err != nil {
 			log.Fatal(err)
 		} else {
@@ -400,7 +404,7 @@ func populateAttestations(state *core.State, block *core.Block, slot uint64, jus
 		}
 
 		// sign
-		indices, err := shared.GetAttestationCommittee(nextStateCopy, slot-1, i)
+		indices, err := shared.GetBeaconCommittee(nextStateCopy, slot-1, i)
 		if err != nil {
 			log.Fatalf("populateAttestations: %s", err.Error())
 		}

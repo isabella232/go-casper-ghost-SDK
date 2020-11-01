@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/core"
 	"github.com/bloxapp/go-casper-ghost-SDK/src/shared/params"
+	"github.com/herumi/bls-eth-go-binary/bls"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/wealdtech/go-bytesutil"
 	"sort"
 )
 
@@ -23,8 +23,11 @@ import (
 		)
  */
 func IsSlashableAttestationData (att1 *core.AttestationData, att2 *core.AttestationData) bool {
-	return (!core.AttestationDataEqual(att1, att2) && att1.Target.Epoch == att2.Target.Epoch) ||
-		(att1.Source.Epoch < att2.Source.Epoch && att2.Target.Epoch < att2.Target.Epoch)
+	return (!core.AttestationDataEqual(att1, att2) && att1.Target.Epoch == att2.Target.Epoch) || // double
+		(																						// surround
+			(att1.Source.Epoch < att2.Source.Epoch && att2.Target.Epoch < att1.Target.Epoch) ||
+				(att2.Source.Epoch < att1.Source.Epoch && att1.Target.Epoch < att2.Target.Epoch))
+
 }
 
 /**
@@ -44,30 +47,63 @@ def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: Indexe
 // TODO - is_valid_indexed_attestation
  */
 func IsValidIndexedAttestation(state *core.State, attestation *core.IndexedAttestation) (bool, error) {
+	validateIndices := func (indices []uint64) error {
+		if len(indices) == 0 {
+			return fmt.Errorf("indices length 0")
+		}
+		if uint64(len(indices)) > params.ChainConfig.MaxValidatorsPerCommittee {
+			return fmt.Errorf("committee indices count larger than MaxValidatorsPerCommittee")
+		}
+		for i := 1; i < len(indices); i++ {
+			if indices[i-1] >= indices[i] {
+				return fmt.Errorf("attesting indices is not uniquely sorted")
+			}
+		}
+		return nil
+	}
+
 	// Verify indices are sorted and unique
 	indices := attestation.AttestingIndices
-	if len(indices) == 0 {
-		return false, fmt.Errorf("indices length 0")
+	if err := validateIndices(indices); err != nil {
+		return false, err
 	}
-	// TODO - or not indices == sorted(set(indices))
+
 	// Verify aggregate signature
-	pubkeys := [][]byte{}
+	pks := []bls.PublicKey{}
 	for _, index := range indices {
-		bp := GetValidator(state, index)
-		if bp == nil {
+		validator := GetValidator(state, index)
+		if validator == nil {
 			return false, fmt.Errorf("BP not found")
 		}
-		pubkeys = append(pubkeys, bp.PubKey)
+		pk := bls.PublicKey{}
+		err := pk.Deserialize(validator.PublicKey)
+		if err != nil {
+			return false, err
+		}
+		pks = append(pks, pk)
 	}
+
 	domain, err := GetDomain(state, params.ChainConfig.DomainBeaconAttester, attestation.Data.Target.Epoch)
 	if err != nil {
 		return false, err
 	}
-	root, err := ComputeSigningRoot(attestation.Data, domain)
+	root, err :=  ComputeSigningRoot(attestation.Data, domain)
 	if err != nil {
 		return false, err
 	}
-	return VerifyAggregateSignature(root[:], pubkeys, domain)
+
+	sig := &bls.Sign{}
+	err = sig.Deserialize(attestation.Signature)
+	if err != nil {
+		return false, err
+	}
+
+	// verify sig
+	res := sig.FastAggregateVerify(pks, root[:])
+	if !res {
+		return false, fmt.Errorf("indexed attestation signature not vrified")
+	}
+	return true, nil
 }
 
 /**
@@ -82,20 +118,26 @@ def compute_committee(indices: Sequence[ValidatorIndex],
     end = (len(indices) * uint64(index + 1)) // count
     return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
  */
-func ComputeCommittee(indices []uint64, seed []byte, index uint64, count uint64) ([]uint64, error) {
+func ComputeCommittee(indices []uint64, seed [32]byte, index uint64, count uint64) ([]uint64, error) {
 	start := uint64(len(indices)) * index / count
 	end := uint64(len(indices)) * uint64(index + 1) / count
 
-	ret := []uint64{}
-	for i := start ; i < end ; i++ {
-		idx, err := computeShuffledIndex(i, uint64(len(indices)), bytesutil.ToBytes32(seed), true, params.ChainConfig.ShuffleRoundCount)
-		if err != nil {
-			return []uint64{}, err
-		}
-
-		ret = append(ret, idx)
+	unshuffled, err := UnshuffleList(indices, seed)
+	if err != nil {
+		return nil, err
 	}
-	return ret, nil
+	return unshuffled[start:end], nil
+
+	//ret := []uint64{}
+	//for i := start ; i < end ; i++ {
+	//	idx, err := computeShuffledIndex(i, uint64(len(indices)), seed, true, params.ChainConfig.ShuffleRoundCount)
+	//	if err != nil {
+	//		return []uint64{}, err
+	//	}
+	//
+	//	ret = append(ret, idx)
+	//}
+	//return ret, nil
 }
 
 /**
@@ -136,16 +178,48 @@ def get_beacon_committee(state: BeaconState, slot: Slot, index: CommitteeIndex) 
         count=committees_per_slot * SLOTS_PER_EPOCH,
     )
  */
-func GetAttestationCommittee(state *core.State, slot uint64, index uint64) ([]uint64, error) {
+func GetBeaconCommittee(state *core.State, slot uint64, index uint64) ([]uint64, error) {
 	epoch := ComputeEpochAtSlot(slot)
 	committeesPerSlot := GetCommitteeCountPerSlot(state, slot)
 	seed := GetSeed(state, epoch, params.ChainConfig.DomainBeaconAttester)
+
+	active := GetActiveValidators(state, epoch)
+	if false {
+		return active, nil
+	}
+
 	return ComputeCommittee(
 			GetActiveValidators(state, epoch),
-			seed[:],
+			seed,
 			(slot % params.ChainConfig.SlotsInEpoch) * committeesPerSlot + index,
 			committeesPerSlot * params.ChainConfig.SlotsInEpoch,
 		)
+}
+
+/**
+def get_indexed_attestation(state: BeaconState, attestation: Attestation) -> IndexedAttestation:
+    """
+    Return the indexed attestation corresponding to ``attestation``.
+    """
+    attesting_indices = get_attesting_indices(state, attestation.data, attestation.aggregation_bits)
+
+    return IndexedAttestation(
+        attesting_indices=sorted(attesting_indices),
+        data=attestation.data,
+        signature=attestation.signature,
+    )
+ */
+func GetIndexedAttestation(state *core.State, attestation *core.Attestation) (*core.IndexedAttestation, error) {
+	indices, err := GetAttestingIndices(state, attestation.Data, attestation.AggregationBits)
+	if err != nil {
+		return nil, err
+	}
+
+	return &core.IndexedAttestation{
+		AttestingIndices:     indices,
+		Data:                 attestation.Data,
+		Signature:            attestation.Signature,
+	}, nil
 }
 
 /**
@@ -159,14 +233,14 @@ def get_attesting_indices(state: BeaconState,
     return set(index for i, index in enumerate(committee) if bits[i])
  */
 func GetAttestingIndices(state *core.State, data *core.AttestationData, bits bitfield.Bitlist) ([]uint64, error) {
-	committee, err := GetAttestationCommittee(state, data.Slot, data.CommitteeIndex)
+	committee, err := GetBeaconCommittee(state, data.Slot, data.CommitteeIndex)
 	if err != nil {
 		return nil, err
 	}
-	ret := []uint64{}
-	for i := range bits {
-		if bits.BitAt(uint64(i)) {
-			ret = append(ret, committee[i])
+	ret := make([]uint64,0,bits.Count())
+	for _, idx := range bits.BitIndices() {
+		if idx < len(committee) {
+			ret = append(ret, committee[idx])
 		}
 	}
 	return ret, nil
@@ -181,7 +255,7 @@ def get_unslashed_attesting_indices(state: BeaconState,
     return set(filter(lambda index: not state.validators[index].slashed, output))
  */
 func GetUnslashedAttestingIndices(state *core.State, attestations []*core.PendingAttestation) ([]uint64, error) {
-	output := []uint64{}
+	output := make([]uint64,0)
 	seen := make(map[uint64]bool)
 
 	for _, a := range attestations {
@@ -202,14 +276,15 @@ func GetUnslashedAttestingIndices(state *core.State, attestations []*core.Pendin
 		return output[i] < output[j]
 	})
 
-	// Remove the slashed validator indices.
+	// Remove slashed validator indices.
+	ret := make([]uint64, 0)
 	for i := range output {
-		bp := GetValidator(state, output[i])
-		if bp != nil && bp.Slashed {
-			output = append(output[:i], output[i+1:]...)
+		val := GetValidator(state, output[i])
+		if val != nil && !val.Slashed {
+			ret = append(ret, output[i])
 		}
 	}
-	return output, nil
+	return ret, nil
 }
 
 /**
@@ -242,7 +317,12 @@ func GetMatchingTargetAttestations(state *core.State, epoch uint64) ([]*core.Pen
 		return nil, err
 	}
 
-	ret := []*core.PendingAttestation{}
+	ret := make([]*core.PendingAttestation,0)
+
+	if len(source) == 0 {
+		return ret, nil
+	}
+
 	targetRoot, err := GetBlockRoot(state, epoch)
 	if err != nil {
 		return nil, err

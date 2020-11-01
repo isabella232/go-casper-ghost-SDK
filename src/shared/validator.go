@@ -60,7 +60,7 @@ func IsEligibleForActivation(state *core.State, bp *core.Validator) bool {
 		"""
 		return (not validator.slashed) and (validator.activation_epoch <= epoch < validator.withdrawable_epoch)
  */
-func IsSlashableBp(bp *core.Validator, epoch uint64) bool {
+func IsSlashableValidator(bp *core.Validator, epoch uint64) bool {
 	return !bp.Slashed && (bp.ActivationEpoch <= epoch && epoch < bp.WithdrawableEpoch)
 }
 
@@ -226,19 +226,19 @@ def initiate_validator_exit(state: BeaconState, index: ValidatorIndex) -> None:
     validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
  */
 func InitiateValidatorExit(state *core.State, index uint64) {
-	bp := GetValidator(state, index)
-	if bp == nil {
+	validator := GetValidator(state, index)
+	if validator == nil {
 		return
 	}
-	if bp.ExitEpoch != params.ChainConfig.FarFutureEpoch {
+	if validator.ExitEpoch != params.ChainConfig.FarFutureEpoch {
 		return
 	}
 
 	// Compute exit queue epoch
 	exitEpochs := []uint64{}
-	for _, bp := range state.Validators {
-		if bp.ExitEpoch != params.ChainConfig.FarFutureEpoch {
-			exitEpochs = append(exitEpochs, bp.ExitEpoch)
+	for _, val := range state.Validators {
+		if val.ExitEpoch != params.ChainConfig.FarFutureEpoch {
+			exitEpochs = append(exitEpochs, val.ExitEpoch)
 		}
 	}
 	exitEpochs = append(exitEpochs, ComputeActivationExitEpoch(GetCurrentEpoch(state)))
@@ -252,16 +252,19 @@ func InitiateValidatorExit(state *core.State, index uint64) {
 	}
 
 	// We use the exit queue churn to determine if we have passed a churn limit.
-	exitQueueChurn := 0
-	for _, bp := range state.Validators {
-		if bp.ExitEpoch == exitQueueEpoch {
+	exitQueueChurn := uint64(0)
+	for _, val := range state.Validators {
+		if val.ExitEpoch == exitQueueEpoch {
 			exitQueueChurn ++
 		}
 	}
+	if exitQueueChurn >= GetValidatorChurnLimit(state) {
+		exitQueueEpoch ++
+	}
 
 	// Set validator exit epoch and withdrawable epoch
-	bp.ExitEpoch = exitQueueEpoch
-	bp.WithdrawableEpoch = bp.ExitEpoch + params.ChainConfig.MinValidatorWithdrawabilityDelay
+	validator.ExitEpoch = exitQueueEpoch
+	validator.WithdrawableEpoch = validator.ExitEpoch + params.ChainConfig.MinValidatorWithdrawabilityDelay
 }
 
 /**
@@ -291,14 +294,14 @@ def slash_validator(state: BeaconState,
 func SlashValidator(state *core.State, slashedIndex uint64) error {
 	epoch := GetCurrentEpoch(state)
 	InitiateValidatorExit(state, slashedIndex)
-	bp := GetValidator(state, slashedIndex)
-	if bp == nil {
-		return fmt.Errorf("slash BP: block producer not found")
+	validator := GetValidator(state, slashedIndex)
+	if validator == nil {
+		return fmt.Errorf("slash validator: block producer not found")
 	}
-	bp.Slashed = true
-	bp.WithdrawableEpoch = mathutil.Max(bp.WithdrawableEpoch, epoch + params.ChainConfig.EpochsPerSlashingVector)
-	state.Slashings[epoch % params.ChainConfig.EpochsPerSlashingVector] += bp.EffectiveBalance
-	DecreaseBalance(state, slashedIndex, bp.EffectiveBalance / params.ChainConfig.MinSlashingPenaltyQuotient)
+	validator.Slashed = true
+	validator.WithdrawableEpoch = mathutil.Max(validator.WithdrawableEpoch, epoch + params.ChainConfig.EpochsPerSlashingVector)
+	state.Slashings[epoch % params.ChainConfig.EpochsPerSlashingVector] += validator.EffectiveBalance
+	DecreaseBalance(state, slashedIndex, validator.EffectiveBalance / params.ChainConfig.MinSlashingPenaltyQuotient)
 
 	// Apply proposer and whistleblower rewards
 	proposer, err := GetBlockProposerIndex(state)
@@ -306,10 +309,10 @@ func SlashValidator(state *core.State, slashedIndex uint64) error {
 		return err
 	}
 	whistleblowerIndex := proposer
-	whistleblowerReward := bp.EffectiveBalance / params.ChainConfig.WhitstleblowerRewardQuotient
+	whistleblowerReward := validator.EffectiveBalance / params.ChainConfig.WhitstleblowerRewardQuotient
 	proposerReward := whistleblowerReward / params.ChainConfig.ProposerRewardQuotient
 	IncreaseBalance(state, proposer, proposerReward)
-	IncreaseBalance(state, whistleblowerIndex, whistleblowerReward)
+	IncreaseBalance(state, whistleblowerIndex, whistleblowerReward - proposerReward)
 	return nil
 }
 
@@ -318,7 +321,7 @@ func SlashValidator(state *core.State, slashedIndex uint64) error {
 func ValidatorIndexByPubkey(state *core.State, pk []byte) (uint64, error) {
 	// TODO - ValidatorIndexByPubkey optimize with some kind of map
 	for i, bp := range state.Validators {
-		if bytes.Equal(pk, bp.PubKey) {
+		if bytes.Equal(pk, bp.PublicKey) {
 			return uint64(i), nil
 		}
 	}

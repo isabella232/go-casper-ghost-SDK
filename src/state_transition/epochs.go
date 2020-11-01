@@ -17,7 +17,7 @@ import (
 //	process_slashings(state)
 //	process_final_updates(state)
 func processEpoch(state *core.State) error {
-	if err := processJustificationAndFinalization(state); err != nil {
+	if err := ProcessJustificationAndFinalization(state); err != nil {
 		return err
 	}
 	if err := ProcessRewardsAndPenalties(state); err != nil {
@@ -79,7 +79,7 @@ def process_justification_and_finalization(state: BeaconState) -> None:
     if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
         state.finalized_checkpoint = old_current_justified_checkpoint
  */
-func processJustificationAndFinalization(state *core.State) error {
+func ProcessJustificationAndFinalization(state *core.State) error {
 	if shared.GetCurrentEpoch(state) <= params.ChainConfig.GenesisEpoch + 1 {
 		return nil
 	}
@@ -226,20 +226,22 @@ def process_registry_updates(state: BeaconState) -> None:
         validator.activation_epoch = compute_activation_exit_epoch(get_current_epoch(state))
 */
 func ProcessRegistryUpdates(state *core.State) error {
-	for index, bp := range state.Validators {
-		if shared.IsEligibleForActivationQueue(bp) {
-			bp.ActivationEligibilityEpoch = shared.GetCurrentEpoch(state) + 1
+	for index, val := range state.Validators {
+		if shared.IsEligibleForActivationQueue(val) {
+			val.ActivationEligibilityEpoch = shared.GetCurrentEpoch(state) + 1
 		}
 
-		if shared.IsActiveValidator(bp, shared.GetCurrentEpoch(state)) && bp.EffectiveBalance <= params.ChainConfig.EjectionBalance {
+		isActive :=  shared.IsActiveValidator(val, shared.GetCurrentEpoch(state))
+		belowEjectionBalance := val.EffectiveBalance <= params.ChainConfig.EjectionBalance
+		if isActive && belowEjectionBalance {
 			shared.InitiateValidatorExit(state, uint64(index))
 		}
 	}
 
 	// Queue validators eligible for activation and not yet dequeued for activation
 	activationQueue := []uint64{}
-	for index, bp := range state.Validators {
-		if shared.IsEligibleForActivation(state, bp) {
+	for index, val := range state.Validators {
+		if shared.IsEligibleForActivation(state, val) {
 			activationQueue = append(activationQueue, uint64(index))
 		}
 	}
@@ -252,9 +254,11 @@ func ProcessRegistryUpdates(state *core.State) error {
 	})
 
 	// Dequeued validators for activation up to churn limit
-	for index := range activationQueue[:mathutil.Min(uint64(len(activationQueue)), shared.GetValidatorChurnLimit(state))] {
-		bp := state.Validators[index]
-		bp.ActivationEpoch = shared.ComputeActivationExitEpoch(shared.GetCurrentEpoch(state))
+	activationExitEpoch := shared.ComputeActivationExitEpoch(shared.GetCurrentEpoch(state))
+	valChurnRate := shared.GetValidatorChurnLimit(state)
+	for _, index := range activationQueue[:mathutil.Min(uint64(len(activationQueue)), valChurnRate)] {
+		val := state.Validators[index]
+		val.ActivationEpoch = activationExitEpoch
 	}
 	return nil
 }
@@ -345,7 +349,7 @@ func ProcessFinalUpdates(state *core.State) error {
 	state.Slashings[nextEpoch % params.ChainConfig.EpochsPerSlashingVector] = 0
 
 	// Set randao mix
-	state.RandaoMix[nextEpoch % params.ChainConfig.EpochsPerHistoricalVector] = shared.GetRandaoMix(state, currentEpoch)
+	state.RandaoMixes[nextEpoch % params.ChainConfig.EpochsPerHistoricalVector] = shared.GetRandaoMix(state, currentEpoch)
 
 	// Set historical root accumulator
 	if nextEpoch % (params.ChainConfig.SlotsPerHistoricalRoot / params.ChainConfig.SlotsInEpoch) == 0 {

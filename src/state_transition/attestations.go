@@ -21,7 +21,14 @@ func processAttestation(state *core.State, attestation *core.Attestation) error 
 	if err := processAttestationNoSigVerify(state, attestation); err != nil {
 		return err
 	}
-	if err := validateAttestationSignature(state, attestation, attestation.Data.Slot); err != nil {
+
+	//    # Check signature
+	//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+	indexedAttestation, err := shared.GetIndexedAttestation(state, attestation)
+	if err != nil {
+		return err
+	}
+	if err := isValidIndexedAttestation(state, indexedAttestation); err != nil {
 		return err
 	}
 	return nil
@@ -54,9 +61,6 @@ func processAttestation(state *core.State, attestation *core.Attestation) error 
 //    else:
 //        assert data.source == state.previous_justified_checkpoint
 //        state.previous_epoch_attestations.append(pending_attestation)
-//
-//    # Check signature
-//    assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
 func processAttestationNoSigVerify(state *core.State, attestation *core.Attestation) error {
 	if err := validateAttestationData(state, attestation.Data); err != nil {
 		return err
@@ -110,11 +114,11 @@ func appendPendingAttestation(state *core.State, attestation *core.Attestation) 
 }
 
 func validateAggregationBits(state *core.State, attestation *core.Attestation) error {
-	expectedCommittee, err := shared.GetAttestationCommittee(state, attestation.Data.Slot, uint64(attestation.Data.CommitteeIndex))
+	expectedCommittee, err := shared.GetBeaconCommittee(state, attestation.Data.Slot, uint64(attestation.Data.CommitteeIndex))
 	if err != nil {
 		return err
 	}
-	if len(expectedCommittee) != len(attestation.AggregationBits) {
+	if uint64(len(expectedCommittee)) != attestation.AggregationBits.Len() {
 		return fmt.Errorf("aggregation bits != committee size")
 	}
 	return nil
@@ -167,48 +171,47 @@ def is_valid_indexed_attestation(state: BeaconState, indexed_attestation: Indexe
     signing_root = compute_signing_root(indexed_attestation.data, domain)
     return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
  */
-func validateAttestationSignature(state *core.State, attestation *core.Attestation, slot uint64) error {
-	// reconstruct committee
-	expectedCommittee, err := shared.GetAttestationCommittee(state, attestation.Data.Slot, uint64(attestation.Data.CommitteeIndex))
-	if err != nil {
-		return err
+func isValidIndexedAttestation(state *core.State, attestation *core.IndexedAttestation) error {
+	if len(attestation.AttestingIndices) == 0 {
+		return fmt.Errorf("attesting indices length is 0")
 	}
 
 	// get pubkeys by aggregation bits
 	pks := make([]bls.PublicKey,0)
-
-	for i, id := range expectedCommittee {
-		bp := shared.GetValidator(state, id)
-		if bp == nil {
+	for _, id := range attestation.AttestingIndices {
+		validator := shared.GetValidator(state, id)
+		if validator == nil {
 			return fmt.Errorf("BP %d is inactivee ", id)
 		}
 
-		// deserialize pk and aggregate
-		if attestation.AggregationBits.BitAt(uint64(i)) {
-			pk := bls.PublicKey{}
-			err := pk.Deserialize(bp.PubKey)
-			if err != nil {
-				return err
-			}
-			pks = append(pks, pk)
+		pk := bls.PublicKey{}
+		err := pk.Deserialize(validator.PublicKey)
+		if err != nil {
+			return err
 		}
+		pks = append(pks, pk)
 	}
 
-	// threshold passed
-	//if len(expectedCommittee) * 2 > 3 * len(pks) {
-	//	return fmt.Errorf("attestation did not pass threshold")
-	//}
-
-	// verify
+	// sig
 	sig := &bls.Sign{}
-	err = sig.Deserialize(attestation.Signature)
+	err := sig.Deserialize(attestation.Signature)
 	if err != nil {
 		return err
 	}
-	root, err := attestation.Data.HashTreeRoot()
+
+	// domain
+	domain, err := shared.GetDomain(state, params.ChainConfig.DomainBeaconAttester, attestation.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
+
+	// root
+	root, err := shared.ComputeSigningRoot(attestation.Data, domain)
+	if err != nil {
+		return err
+	}
+
+	// verify sig
 	res := sig.FastAggregateVerify(pks, root[:])
 	if !res {
 		return fmt.Errorf("attestation signature not vrified")
